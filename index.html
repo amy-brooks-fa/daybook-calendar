@@ -1,0 +1,1176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#F7F4EE">
+<title>Booking Calendar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F7F4EE;--paper:#FFFFFF;--ink:#1C1B19;--muted:#6B665E;--line:#E2DCD1;--accent:#1F5E4B;--accent-soft:#E3EFE9;--red:#C0262D;--red-soft:#FCE9E9;--r:10px}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-text-size-adjust:100%}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.wrap{max-width:1100px;margin:0 auto;padding:16px 16px 120px}
+header{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.kicker{width:100%;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+h1{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:32px;line-height:1.1;margin:0;flex:1;min-width:0}
+.nav{display:flex;gap:8px}
+@media(max-width:560px){h1{flex-basis:100%}.nav{width:100%}.nav #todayBtn{flex:1}}
+.sub:empty{display:none}
+.btn{border:1px solid var(--line);background:var(--paper);border-radius:var(--r);height:48px;min-width:48px;padding:0 14px;font-weight:600;font-size:16px}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{background:#fff;border-color:var(--red);color:var(--red)}
+.btn.red{background:var(--red);border-color:var(--red);color:#fff}
+.btn svg{width:22px;height:22px;vertical-align:middle}
+.layout{display:grid;gap:16px}
+@media(min-width:860px){.layout{grid-template-columns:1.6fr 1fr;align-items:start}}
+.cal{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.dow,.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.dow div{font-size:12px;font-weight:600;color:var(--muted);text-align:center;padding:8px 0;border-bottom:1px solid var(--line);letter-spacing:.04em}
+.day{position:relative;min-height:64px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 4px 4px;background:none;border-top:0;border-left:0;text-align:left;display:flex;flex-direction:column;gap:3px;border-radius:0}
+.grid .day:nth-child(7n){border-right:0}
+.day .n{font-size:15px;font-weight:600;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%}
+.day.other .n{color:#B5AEA2}
+.day.today .n{background:var(--ink);color:#fff}
+.day.yt{background:#FBF3E1}
+.day.sel{background:var(--accent-soft)}
+.day .hd{position:absolute;bottom:5px;right:4px;font-size:11px;line-height:1;color:#9A8F7E;direction:rtl;white-space:nowrap;pointer-events:none}
+.day .hd .hm{display:none}
+.day .hol{display:none}
+.day .hdot{width:8px;height:8px;border-radius:50%;margin-left:10px}
+.hc-y{--h:#8A4B00;--hd:#C98A1B}.hc-c{--h:#7A5F22;--hd:#E0B860}.hc-f{--h:#5B4B8A;--hd:#7D6BB0}.hc-r{--h:#2C6680;--hd:#5A9BBF}.hc-p{--h:#9A4A12;--hd:#E07B2E}.hc-e,.hc-m{--h:#5E584F;--hd:#A79C8A}
+.hdot{background:var(--hd)}
+.hol span{color:var(--h)}
+.dayhol{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 12px}
+.dayhol span{font-size:14px;font-weight:600;color:var(--h);background:#FBF3E1;border:1px solid #EEDDB8;border-radius:6px;padding:2px 8px}
+.dayhol span.hc-f{background:#F1EEF8;border-color:#DCD5EE}.dayhol span.hc-r{background:#EAF3F7;border-color:#CFE3EC}.dayhol span.hc-e,.dayhol span.hc-m{background:#F4F1EB;border-color:var(--line)}
+.dayhol .heb{color:var(--muted);background:none;border:0;padding:2px 0;font-weight:500;direction:rtl}
+.holwarn{margin-top:8px;border-radius:var(--r);padding:8px 12px;font-size:15px;background:#FBF3E1;border:1px solid #EEDDB8;color:#6E3D00;display:none}
+.holwarn.on{display:block}.holwarn.soft{background:#F4F1EB;border-color:var(--line);color:var(--muted)}
+.agrow{margin-top:6px}
+.agency{margin-top:20px}
+.agency h2.ag{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:24px;margin:0;padding:10px 0 4px;border-bottom:2px solid var(--ink)}
+.agency h2.ag small{display:block;font-family:Inter,system-ui,sans-serif;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.agtot{margin-top:12px;border:2px solid var(--ink);border-radius:var(--r);padding:10px 14px;display:flex;flex-wrap:wrap;gap:6px 18px;font-weight:700;font-variant-numeric:tabular-nums}
+.agtot span:first-child{flex-basis:100%;font-family:Fraunces,Georgia,serif;font-size:18px}
+.billto{color:var(--ink);font-weight:600}
+.day .count{font-size:12px;font-weight:700;background:var(--accent);color:#fff;border-radius:6px;padding:0 6px;align-self:flex-start;line-height:20px}
+.day.clash .count{background:var(--red)}
+.day .names{display:none}
+@media(min-width:860px){.day{min-height:104px;padding:6px}.day .count{display:none}.day .names{display:flex;flex-direction:column;gap:2px}
+.day .hd{font-size:12px;bottom:auto;top:10px;right:7px}.day .hd .hm{display:inline}.day .hdot{display:none}
+.day .hol{display:flex;flex-direction:column;font-size:11.5px;line-height:15px;font-weight:600}.day .hol span{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
+.chip{font-size:12px;line-height:18px;padding:0 5px;border-radius:4px;background:var(--accent-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip.c{background:var(--red-soft);color:var(--red);font-weight:600}.more{font-size:12px;color:var(--muted)}}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.panel h2{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:24px;margin:0 0 4px}
+.sub{color:var(--muted);font-size:15px;margin:0 0 12px}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.item{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-left:5px solid var(--accent);border-radius:8px;padding:12px}
+.item .t{font-weight:700;min-width:84px;font-variant-numeric:tabular-nums}
+.item .nm{font-weight:600;font-size:18px;word-break:break-word}
+.item .nt{color:var(--muted);font-size:15px;word-break:break-word}
+.item.c{border-color:#F0C4C4;border-left-color:var(--red);background:var(--red-soft)}
+.tag{display:inline-block;background:var(--red);color:#fff;font-size:12px;font-weight:700;letter-spacing:.05em;border-radius:4px;padding:0 6px;margin-top:4px}
+.item .dt{font-size:14px;color:var(--muted)}
+.empty{color:var(--muted);padding:12px 0}
+.addday{width:100%;margin-top:12px}
+.fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));height:60px;padding:0 24px;border-radius:30px;font-size:18px;box-shadow:0 6px 18px rgba(31,94,75,.35);z-index:5}
+.search{margin-top:16px}
+.search input{width:100%;height:48px;border:1px solid var(--line);border-radius:var(--r);padding:0 14px;background:#fff}
+.legend{display:flex;gap:16px;font-size:14px;color:var(--muted);margin-top:10px;flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:6px}
+dialog{border:0;border-radius:16px;padding:0;width:min(520px,calc(100% - 24px));max-height:calc(100% - 24px);background:var(--paper);color:var(--ink)}
+dialog::backdrop{background:rgba(28,27,25,.45)}
+.dlg{padding:20px}
+.dlg h3{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:26px;margin:0 0 16px}
+label{display:block;font-weight:600;font-size:15px;margin:12px 0 6px}
+.f{width:100%;height:52px;border:1px solid #CFC8BB;border-radius:var(--r);padding:0 14px;background:#fff;font-size:18px}
+textarea.f{height:80px;padding:12px 14px;resize:vertical}
+.f:focus{outline:3px solid #A8CFC0;border-color:var(--accent)}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.row2 .f{min-width:0;padding:0 10px}
+dialog{overflow-x:hidden}
+.warn{margin-top:12px;background:var(--red-soft);border:1px solid #F0C4C4;color:#8E1B21;border-radius:var(--r);padding:10px 12px;font-size:15px;display:none}
+.warn.on{display:block}
+.err{color:var(--red);font-weight:600;margin-top:10px;min-height:1px}
+.actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+.actions .btn{flex:1;height:54px;font-size:17px}
+.clashbox{border-left:5px solid var(--red);background:var(--red-soft);padding:12px 14px;border-radius:8px;margin:0 0 8px}
+.clashtitle{color:var(--red)}
+.linkbtn{display:block;margin:14px auto 0;background:none;border:0;color:var(--muted);text-decoration:underline;font-size:15px;padding:8px}
+.warn{font-size:16px}.warn .wt{display:block;font-weight:700;font-size:17px}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:10px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;max-width:90%}
+.toast.on{opacity:1}
+.loading{opacity:.55}
+.tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;background:#ECE6DB;border-radius:12px;padding:4px;margin-bottom:16px;max-width:420px}
+.tabs button{height:44px;border:0;border-radius:9px;background:none;font-weight:600;font-size:16px;color:var(--muted)}
+.tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.hint{font-size:14px;color:var(--muted);margin-top:4px}
+.chk{display:flex;align-items:center;gap:10px;font-weight:500;font-size:15px;margin:10px 0 0}
+.chk input{width:22px;height:22px;accent-color:var(--accent)}
+.money{position:relative}.money span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:18px}.money .f{padding-left:28px}
+.item .hrs{font-size:14px;color:var(--muted)}
+/* totals */
+.tbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.tbar select{height:48px;border:1px solid var(--line);border-radius:var(--r);padding:0 12px;background:#fff;font-weight:600;font-size:16px;flex:1;min-width:0}
+.tbar .btn.primary{flex:1}
+.rep h2.rt{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:26px;margin:0 0 2px}
+.client{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-top:12px}
+.client h3{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:22px;margin:0}
+.rateline{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:6px 0 10px;color:var(--muted);font-size:15px}
+.rateline .money{width:120px}.rateline .f{height:44px;font-size:16px}.rateline .btn{height:44px}
+.norate{color:var(--red);font-weight:600}
+table.bk{width:100%;table-layout:fixed;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
+table.bk th{text-align:left;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line);padding:6px 4px}
+table.bk td{border-bottom:1px solid #EFEAE1;padding:8px 4px;vertical-align:top}
+table.bk .r{text-align:right;white-space:nowrap}
+table.bk td:nth-child(1),table.bk td:nth-child(2){white-space:nowrap}
+.rep{margin-top:20px}
+table.bk tr.tot td{border-bottom:0;border-top:2px solid var(--ink);font-weight:700;padding-top:10px}
+.ov{display:block;font-size:12px;color:var(--muted)}
+.grand{margin-top:16px;background:var(--ink);color:#fff;border-radius:var(--r);padding:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.grand div b{display:block;font-size:22px}.grand div{font-size:13px;opacity:.9}
+.printonly{display:none}
+@media print{
+  @page{margin:14mm}
+  html,body{background:#fff;font-size:12pt}
+  .noprint,header,.tabs,.fab,#calView,dialog,.toast{display:none!important}
+  .wrap{padding:0;max-width:none}
+  .printonly{display:block}
+  .client{border:0;border-radius:0;padding:0;margin:0 0 18pt;break-inside:avoid-page}
+  .rep.pb .client + .client{break-before:page}
+  .agency + .agency,.agency + .grand{break-before:page}
+  .agency{margin:0}
+  .agtot{break-inside:avoid}
+  .grand{background:#fff;color:#000;border:2px solid #000;break-inside:avoid}
+  .grand div{opacity:1}
+  table.bk{font-size:11pt}
+}
+.crow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px}
+.btn.outline{border:2px solid var(--accent);color:var(--accent);background:#fff}
+.cli{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px}
+.cli .nm{font-weight:600;font-size:18px;word-break:break-word}.cli .meta{font-size:14px;color:var(--muted)}
+.cli .rt{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}.cli .rt.none{color:var(--muted);font-weight:500}
+.f.sel{appearance:auto;-webkit-appearance:menulist;font-weight:500}
+.btn.up{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:10px;border-style:dashed;border-color:#B9B1A3}
+.btn.up svg{width:20px;height:20px;flex:none}
+.uphint{font-size:14px;color:var(--muted);margin:8px 0 0}
+#upDlg{width:min(640px,calc(100% - 16px))}
+#upDlg .dlg{padding:20px 16px}
+.sum{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
+.sum span{font-size:14px;font-weight:600;border-radius:6px;padding:3px 9px;background:var(--accent-soft);color:var(--accent)}
+.sum span.s{background:#EFEAE1;color:var(--muted)}.sum span.k{background:var(--red-soft);color:var(--red)}
+.ugrp{margin-top:16px}
+.ugrp h4{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 6px;font-weight:700}
+.urow{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid #EFEAE1;font-size:15px}
+.urow input{width:22px;height:22px;margin:1px 0 0;flex:none;accent-color:var(--accent)}
+.urow .u1{font-weight:600;font-size:16px;word-break:break-word}.urow .u2{color:var(--muted);font-size:14px;word-break:break-word}
+.urow .ch{color:var(--accent);font-weight:600}
+.urow.c .u1{color:var(--red)}.urow .tag{margin-top:2px}
+.urow.sk{color:var(--muted)}.urow.sk .u1{font-weight:500;font-size:15px;color:var(--ink)}
+.cols{font-size:14px;color:var(--muted);background:#F6F3ED;border-radius:8px;padding:8px 10px;margin-top:8px}
+details.ugrp summary{cursor:pointer;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.upactions{position:sticky;bottom:-20px;background:var(--paper);padding:12px 0 4px;margin-top:12px;border-top:1px solid var(--line)}
+.spin{display:inline-block;width:18px;height:18px;border:3px solid #CFE3DA;border-top-color:var(--accent);border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-3px;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+/* Round 7: bigger calendar */
+@media(min-width:1200px){.wrap{max-width:1440px}}
+@media(min-width:860px){.layout{grid-template-columns:2.4fr 1fr}}
+.dow div{font-size:13px;padding:10px 0}
+.day{min-height:78px}
+.day .n{font-size:17px;width:32px;height:32px}
+.day .count{font-size:13px;line-height:22px}
+.day .hd{font-size:12px}
+@media(min-width:860px){.day{min-height:132px;padding:8px}.day .n{font-size:20px;width:36px;height:36px}.chip{font-size:13.5px;line-height:21px}.more{font-size:13px}
+.day .hd{font-size:13.5px;top:14px;right:9px}.day .hol{font-size:13px;line-height:17px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="tabs noprint" role="tablist">
+    <button id="tabCal" class="on">Calendar</button>
+    <button id="tabCli">Clients</button>
+    <button id="tabTot">Totals</button>
+  </div>
+
+  <div id="calView">
+  <header>
+    <div class="kicker">Booking calendar</div>
+    <h1 id="title">Month</h1>
+    <div class="nav">
+      <button class="btn" id="prev" aria-label="Previous month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <button class="btn" id="todayBtn">Today</button>
+      <button class="btn" id="next" aria-label="Next month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+    </div>
+  </header>
+  <div class="layout">
+    <div>
+      <div class="cal" id="cal">
+        <div class="dow"><div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div></div>
+        <div class="grid" id="grid"></div>
+      </div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>Booked</span><span><i style="background:var(--red)"></i>Clash: times overlap</span><span><i style="background:#FBF3E1;border:1px solid #E6CF9C"></i>Shabbos / Yom Tov</span><span><i style="background:#C98A1B;border-radius:50%"></i>Jewish holiday (outside Israel)</span></div>
+    </div>
+    <section class="panel" id="panel">
+      <h2 id="dayTitle">Day</h2>
+      <div class="dayhol" id="dayHol"></div>
+      <p class="sub" id="daySub"></p>
+      <ul class="list" id="dayList"></ul>
+      <button class="btn addday" id="addDay">+ Add to this day</button>
+      <div class="search">
+        <label for="q">Find a name</label>
+        <input id="q" type="search" placeholder="Type a name to see all its dates" autocomplete="off">
+        <ul class="list" id="results" style="margin-top:8px"></ul>
+      </div>
+    </section>
+  </div>
+  <button class="btn primary fab" id="fab">+ Add</button>
+  </div>
+
+  <div id="cliView" hidden>
+    <header>
+      <div class="kicker">Clients</div>
+      <h1>Your clients</h1>
+    </header>
+    <button class="btn primary" id="newClientBtn2" style="width:100%;height:54px;font-size:17px">+ New client</button>
+    <button class="btn up" id="upBtn2" style="width:100%;height:54px;margin-top:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Upload a file (Excel, Word, PDF)</button>
+    <p class="uphint">The file can be a list of clients with columns like <b>Name</b>, <b>Agency</b> (or Billed to), <b>Notes</b>. Bookings with <b>Date</b>, <b>Start</b>, <b>End</b> and <b>Client</b> are added to the calendar too. You see everything before it is saved.</p>
+    <input type="file" id="upFile" accept=".xlsx,.xls,.xlsm,.csv,.ods,.txt,.docx,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf" hidden>
+    <p class="sub" id="cliSub" style="margin-top:12px"></p>
+    <ul class="list" id="cliList"></ul>
+  </div>
+
+  <div id="totView" hidden>
+    <header class="noprint">
+      <div class="kicker">Monthly totals</div>
+      <h1 id="tTitle">Month</h1>
+      <div class="nav">
+        <button class="btn" id="tPrev" aria-label="Previous month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <button class="btn" id="tNow">This month</button>
+        <button class="btn" id="tNext" aria-label="Next month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+      </div>
+    </header>
+    <div class="tbar noprint">
+      <select id="tAgency" aria-label="Which agency"><option value="">All agencies</option></select>
+      <select id="tClient" aria-label="Which client"><option value="">All clients</option></select>
+      <button class="btn primary" id="printBtn">Print or save PDF</button>
+    </div>
+    <label class="chk noprint"><input type="checkbox" id="tPb" checked> When printing, start each client on a new page (each agency always starts on a new page)</label>
+    <div class="rep" id="rep"></div>
+  </div>
+</div>
+
+<dialog id="form">
+  <form class="dlg" id="f" novalidate>
+    <h3 id="formTitle">Add</h3>
+    <label for="fpick">Client</label>
+    <select class="f sel" id="fpick"></select>
+    <label for="fname">Name</label>
+    <input class="f" id="fname" autocomplete="off" maxlength="80" placeholder="Or type a new name">
+    <label for="fdate">Date</label>
+    <input class="f" id="fdate" type="date">
+    <div class="holwarn" id="holWarn"></div>
+    <div class="row2">
+      <div><label for="ftime">Start</label><input class="f" id="ftime" type="time" step="300"></div>
+      <div><label for="fend">End</label><input class="f" id="fend" type="time" step="300"></div>
+    </div>
+    <div class="hint" id="fhrs"></div>
+    <div class="warn" id="liveWarn"></div>
+    <div hidden><!-- rate hidden on owner's request (Round 7); values kept and sent back unchanged -->
+    <label for="frate">Rate per hour</label>
+    <div class="money"><span>$</span><input class="f" id="frate" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+    <label class="chk"><input type="checkbox" id="fonly"> Different rate just for this booking</label>
+    <div class="hint" id="ratehint">Saved as this client's usual rate.</div>
+    </div>
+    <label for="fnote">Note (optional)</label>
+    <textarea class="f" id="fnote" maxlength="300" placeholder="Anything to remember"></textarea>
+    <div class="err" id="ferr"></div>
+    <div class="actions">
+      <button type="button" class="btn" id="cancel">Cancel</button>
+      <button type="submit" class="btn primary" id="save">Save</button>
+    </div>
+    <div class="actions" id="delRow" style="margin-top:10px"><button type="button" class="btn danger" id="del">Delete this entry</button></div>
+  </form>
+</dialog>
+
+<dialog id="cliDlg">
+  <form class="dlg" id="cf" novalidate>
+    <h3 id="cliTitle">New client</h3>
+    <label for="cname">Client name</label>
+    <input class="f" id="cname" autocomplete="off" maxlength="80" placeholder="Client name">
+    <div hidden><!-- rate, phone, email hidden (Round 7); kept in DB -->
+    <label for="crate">Usual rate per hour (optional)</label>
+    <div class="money"><span>$</span><input class="f" id="crate" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+    <div class="row2">
+      <div><label for="cphone">Phone (optional)</label><input class="f" id="cphone" type="tel" autocomplete="off" maxlength="40"></div>
+      <div><label for="cemail">Email (optional)</label><input class="f" id="cemail" type="email" autocomplete="off" maxlength="120"></div>
+    </div>
+    </div>
+    <label for="cnote">Note (optional)</label>
+    <input class="f" id="cnote" autocomplete="off" maxlength="300">
+    <label for="cagency">Bills to (agency)</label>
+    <select class="f sel" id="cagency"></select>
+    <input class="f agrow" id="cagencyNew" autocomplete="off" maxlength="80" placeholder="Type the new agency's name" hidden>
+    <div class="hint" id="cliHint"></div>
+    <div class="err" id="cerr"></div>
+    <div class="actions">
+      <button type="button" class="btn" id="cCancel">Cancel</button>
+      <button type="submit" class="btn primary" id="cSave">Save</button>
+    </div>
+    <div class="actions" id="cDelRow" style="margin-top:10px"><button type="button" class="btn danger" id="cDel">Delete this client</button></div>
+  </form>
+</dialog>
+
+<dialog id="cliDelDlg">
+  <div class="dlg">
+    <h3>Delete this client?</h3>
+    <p id="cliDelText" style="margin:0"></p>
+    <div class="actions">
+      <button class="btn" id="cDelNo">Keep</button>
+      <button class="btn red" id="cDelYes">Delete</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="clashDlg">
+  <div class="dlg">
+    <h3 class="clashtitle">This hour is already booked</h3>
+    <p id="clashText" style="margin:0 0 12px"></p>
+    <div id="clashList"></div>
+    <div class="actions">
+      <button class="btn primary" id="clashBack" style="flex:1">Change the time</button>
+    </div>
+    <button class="linkbtn" id="clashSave">Save anyway (it will show red as a clash)</button>
+  </div>
+</dialog>
+
+<dialog id="delDlg">
+  <div class="dlg">
+    <h3>Delete this entry?</h3>
+    <p id="delText" style="margin:0"></p>
+    <div class="actions">
+      <button class="btn" id="delNo">Keep it</button>
+      <button class="btn red" id="delYes">Delete</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="upDlg">
+  <div class="dlg">
+    <h3 id="upTitle">Upload a file</h3>
+    <div id="upBody"></div>
+    <div class="err" id="uperr"></div>
+    <div class="actions upactions">
+      <button class="btn" id="upCancel">Cancel</button>
+      <button class="btn primary" id="upSave">Save all</button>
+    </div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* Jewish holidays, diaspora (2-day Yom Tov), Ashkenazi spelling. Generated with @hebcal/core 6.16.1 on 2026-11-22. Range 2025-2031. */
+const JHOL={"2025-01-01":[["Rosh Chodesh Teves","r"],["Chanukah · 8th light","p"]],"2025-01-02":[["Chanukah · 8th day","p"]],"2025-01-10":[["Asara B'Teves","f"]],"2025-01-30":[["Rosh Chodesh Sh'vat","r"]],"2025-02-13":[["Tu BiShvat","m"]],"2025-02-28":[["Rosh Chodesh Adar","r"]],"2025-03-01":[["Rosh Chodesh Adar","r"]],"2025-03-13":[["Ta'anis Esther","f"],["Erev Purim","e"]],"2025-03-14":[["Purim","p"]],"2025-03-15":[["Shushan Purim","p"]],"2025-03-16":[["Purim Meshulash","p"]],"2025-03-30":[["Rosh Chodesh Nisan","r"]],"2025-04-10":[["Ta'anis Bechoros","f"]],"2025-04-12":[["Erev Pesach","e"]],"2025-04-13":[["Pesach I","y"]],"2025-04-14":[["Pesach II","y"]],"2025-04-15":[["Pesach III · Chol Hamoed","c"]],"2025-04-16":[["Pesach IV · Chol Hamoed","c"]],"2025-04-17":[["Pesach V · Chol Hamoed","c"]],"2025-04-18":[["Pesach VI · Chol Hamoed","c"]],"2025-04-19":[["Pesach VII","y"]],"2025-04-20":[["Pesach VIII","y"]],"2025-04-28":[["Rosh Chodesh Iyyar","r"]],"2025-04-29":[["Rosh Chodesh Iyyar","r"]],"2025-05-12":[["Pesach Sheni","m"]],"2025-05-16":[["Lag BaOmer","m"]],"2025-05-28":[["Rosh Chodesh Sivan","r"]],"2025-06-01":[["Erev Shavuos","e"]],"2025-06-02":[["Shavuos I","y"]],"2025-06-03":[["Shavuos II","y"]],"2025-06-26":[["Rosh Chodesh Tamuz","r"]],"2025-06-27":[["Rosh Chodesh Tamuz","r"]],"2025-07-13":[["Tzom Tammuz","f"]],"2025-07-26":[["Rosh Chodesh Av","r"]],"2025-08-02":[["Erev Tish'a B'Av","e"]],"2025-08-03":[["Tish'a B'Av","f"]],"2025-08-09":[["Tu B'Av","m"]],"2025-08-24":[["Rosh Chodesh Elul","r"]],"2025-08-25":[["Rosh Hashana LaBeheimos","m"],["Rosh Chodesh Elul","r"]],"2025-09-13":[["Leil Selichos","m"]],"2025-09-22":[["Erev Rosh Hashana","e"]],"2025-09-23":[["Rosh Hashana I","y"]],"2025-09-24":[["Rosh Hashana II","y"]],"2025-09-25":[["Tzom Gedaliah","f"]],"2025-10-01":[["Erev Yom Kippur","e"]],"2025-10-02":[["Yom Kippur","y"]],"2025-10-06":[["Erev Sukkos","e"]],"2025-10-07":[["Sukkos I","y"]],"2025-10-08":[["Sukkos II","y"]],"2025-10-09":[["Sukkos III · Chol Hamoed","c"]],"2025-10-10":[["Sukkos IV · Chol Hamoed","c"]],"2025-10-11":[["Sukkos V · Chol Hamoed","c"]],"2025-10-12":[["Sukkos VI · Chol Hamoed","c"]],"2025-10-13":[["Sukkos VII (Hoshana Raba)","c"]],"2025-10-14":[["Shmini Atzeres","y"]],"2025-10-15":[["Simchas Torah","y"]],"2025-10-22":[["Rosh Chodesh Cheshvan","r"]],"2025-10-23":[["Rosh Chodesh Cheshvan","r"]],"2025-11-21":[["Rosh Chodesh Kislev","r"]],"2025-12-14":[["Chanukah: 1st light (tonight)","p"]],"2025-12-15":[["Chanukah · 2nd light","p"]],"2025-12-16":[["Chanukah · 3rd light","p"]],"2025-12-17":[["Chanukah · 4th light","p"]],"2025-12-18":[["Chanukah · 5th light","p"]],"2025-12-19":[["Chanukah · 6th light","p"]],"2025-12-20":[["Rosh Chodesh Teves","r"],["Chanukah · 7th light","p"]],"2025-12-21":[["Rosh Chodesh Teves","r"],["Chanukah · 8th light","p"]],"2025-12-22":[["Chanukah · 8th day","p"]],"2025-12-30":[["Asara B'Teves","f"]],"2026-01-19":[["Rosh Chodesh Sh'vat","r"]],"2026-02-02":[["Tu BiShvat","m"]],"2026-02-17":[["Rosh Chodesh Adar","r"]],"2026-02-18":[["Rosh Chodesh Adar","r"]],"2026-03-02":[["Ta'anis Esther","f"],["Erev Purim","e"]],"2026-03-03":[["Purim","p"]],"2026-03-04":[["Shushan Purim","p"]],"2026-03-19":[["Rosh Chodesh Nisan","r"]],"2026-04-01":[["Ta'anis Bechoros","f"],["Erev Pesach","e"]],"2026-04-02":[["Pesach I","y"]],"2026-04-03":[["Pesach II","y"]],"2026-04-04":[["Pesach III · Chol Hamoed","c"]],"2026-04-05":[["Pesach IV · Chol Hamoed","c"]],"2026-04-06":[["Pesach V · Chol Hamoed","c"]],"2026-04-07":[["Pesach VI · Chol Hamoed","c"]],"2026-04-08":[["Pesach VII","y"]],"2026-04-09":[["Pesach VIII","y"]],"2026-04-17":[["Rosh Chodesh Iyyar","r"]],"2026-04-18":[["Rosh Chodesh Iyyar","r"]],"2026-05-01":[["Pesach Sheni","m"]],"2026-05-05":[["Lag BaOmer","m"]],"2026-05-17":[["Rosh Chodesh Sivan","r"]],"2026-05-21":[["Erev Shavuos","e"]],"2026-05-22":[["Shavuos I","y"]],"2026-05-23":[["Shavuos II","y"]],"2026-06-15":[["Rosh Chodesh Tamuz","r"]],"2026-06-16":[["Rosh Chodesh Tamuz","r"]],"2026-07-02":[["Tzom Tammuz","f"]],"2026-07-15":[["Rosh Chodesh Av","r"]],"2026-07-22":[["Erev Tish'a B'Av","e"]],"2026-07-23":[["Tish'a B'Av","f"]],"2026-07-29":[["Tu B'Av","m"]],"2026-08-13":[["Rosh Chodesh Elul","r"]],"2026-08-14":[["Rosh Hashana LaBeheimos","m"],["Rosh Chodesh Elul","r"]],"2026-09-05":[["Leil Selichos","m"]],"2026-09-11":[["Erev Rosh Hashana","e"]],"2026-09-12":[["Rosh Hashana I","y"]],"2026-09-13":[["Rosh Hashana II","y"]],"2026-09-14":[["Tzom Gedaliah","f"]],"2026-09-20":[["Erev Yom Kippur","e"]],"2026-09-21":[["Yom Kippur","y"]],"2026-09-25":[["Erev Sukkos","e"]],"2026-09-26":[["Sukkos I","y"]],"2026-09-27":[["Sukkos II","y"]],"2026-09-28":[["Sukkos III · Chol Hamoed","c"]],"2026-09-29":[["Sukkos IV · Chol Hamoed","c"]],"2026-09-30":[["Sukkos V · Chol Hamoed","c"]],"2026-10-01":[["Sukkos VI · Chol Hamoed","c"]],"2026-10-02":[["Sukkos VII (Hoshana Raba)","c"]],"2026-10-03":[["Shmini Atzeres","y"]],"2026-10-04":[["Simchas Torah","y"]],"2026-10-11":[["Rosh Chodesh Cheshvan","r"]],"2026-10-12":[["Rosh Chodesh Cheshvan","r"]],"2026-11-10":[["Rosh Chodesh Kislev","r"]],"2026-11-11":[["Rosh Chodesh Kislev","r"]],"2026-12-04":[["Chanukah: 1st light (tonight)","p"]],"2026-12-05":[["Chanukah · 2nd light","p"]],"2026-12-06":[["Chanukah · 3rd light","p"]],"2026-12-07":[["Chanukah · 4th light","p"]],"2026-12-08":[["Chanukah · 5th light","p"]],"2026-12-09":[["Chanukah · 6th light","p"]],"2026-12-10":[["Rosh Chodesh Teves","r"],["Chanukah · 7th light","p"]],"2026-12-11":[["Rosh Chodesh Teves","r"],["Chanukah · 8th light","p"]],"2026-12-12":[["Chanukah · 8th day","p"]],"2026-12-20":[["Asara B'Teves","f"]],"2027-01-09":[["Rosh Chodesh Sh'vat","r"]],"2027-01-23":[["Tu BiShvat","m"]],"2027-02-07":[["Rosh Chodesh Adar I","r"]],"2027-02-08":[["Rosh Chodesh Adar I","r"]],"2027-02-21":[["Purim Koton","p"]],"2027-02-22":[["Shushan Purim Koton","p"]],"2027-03-09":[["Rosh Chodesh Adar II","r"]],"2027-03-10":[["Rosh Chodesh Adar II","r"]],"2027-03-22":[["Ta'anis Esther","f"],["Erev Purim","e"]],"2027-03-23":[["Purim","p"]],"2027-03-24":[["Shushan Purim","p"]],"2027-04-08":[["Rosh Chodesh Nisan","r"]],"2027-04-21":[["Ta'anis Bechoros","f"],["Erev Pesach","e"]],"2027-04-22":[["Pesach I","y"]],"2027-04-23":[["Pesach II","y"]],"2027-04-24":[["Pesach III · Chol Hamoed","c"]],"2027-04-25":[["Pesach IV · Chol Hamoed","c"]],"2027-04-26":[["Pesach V · Chol Hamoed","c"]],"2027-04-27":[["Pesach VI · Chol Hamoed","c"]],"2027-04-28":[["Pesach VII","y"]],"2027-04-29":[["Pesach VIII","y"]],"2027-05-07":[["Rosh Chodesh Iyyar","r"]],"2027-05-08":[["Rosh Chodesh Iyyar","r"]],"2027-05-21":[["Pesach Sheni","m"]],"2027-05-25":[["Lag BaOmer","m"]],"2027-06-06":[["Rosh Chodesh Sivan","r"]],"2027-06-10":[["Erev Shavuos","e"]],"2027-06-11":[["Shavuos I","y"]],"2027-06-12":[["Shavuos II","y"]],"2027-07-05":[["Rosh Chodesh Tamuz","r"]],"2027-07-06":[["Rosh Chodesh Tamuz","r"]],"2027-07-22":[["Tzom Tammuz","f"]],"2027-08-04":[["Rosh Chodesh Av","r"]],"2027-08-11":[["Erev Tish'a B'Av","e"]],"2027-08-12":[["Tish'a B'Av","f"]],"2027-08-18":[["Tu B'Av","m"]],"2027-09-02":[["Rosh Chodesh Elul","r"]],"2027-09-03":[["Rosh Hashana LaBeheimos","m"],["Rosh Chodesh Elul","r"]],"2027-09-25":[["Leil Selichos","m"]],"2027-10-01":[["Erev Rosh Hashana","e"]],"2027-10-02":[["Rosh Hashana I","y"]],"2027-10-03":[["Rosh Hashana II","y"]],"2027-10-04":[["Tzom Gedaliah","f"]],"2027-10-10":[["Erev Yom Kippur","e"]],"2027-10-11":[["Yom Kippur","y"]],"2027-10-15":[["Erev Sukkos","e"]],"2027-10-16":[["Sukkos I","y"]],"2027-10-17":[["Sukkos II","y"]],"2027-10-18":[["Sukkos III · Chol Hamoed","c"]],"2027-10-19":[["Sukkos IV · Chol Hamoed","c"]],"2027-10-20":[["Sukkos V · Chol Hamoed","c"]],"2027-10-21":[["Sukkos VI · Chol Hamoed","c"]],"2027-10-22":[["Sukkos VII (Hoshana Raba)","c"]],"2027-10-23":[["Shmini Atzeres","y"]],"2027-10-24":[["Simchas Torah","y"]],"2027-10-31":[["Rosh Chodesh Cheshvan","r"]],"2027-11-01":[["Rosh Chodesh Cheshvan","r"]],"2027-11-30":[["Rosh Chodesh Kislev","r"]],"2027-12-01":[["Rosh Chodesh Kislev","r"]],"2027-12-24":[["Chanukah: 1st light (tonight)","p"]],"2027-12-25":[["Chanukah · 2nd light","p"]],"2027-12-26":[["Chanukah · 3rd light","p"]],"2027-12-27":[["Chanukah · 4th light","p"]],"2027-12-28":[["Chanukah · 5th light","p"]],"2027-12-29":[["Chanukah · 6th light","p"]],"2027-12-30":[["Rosh Chodesh Teves","r"],["Chanukah · 7th light","p"]],"2027-12-31":[["Rosh Chodesh Teves","r"],["Chanukah · 8th light","p"]],"2028-01-01":[["Chanukah · 8th day","p"]],"2028-01-09":[["Asara B'Teves","f"]],"2028-01-29":[["Rosh Chodesh Sh'vat","r"]],"2028-02-12":[["Tu BiShvat","m"]],"2028-02-27":[["Rosh Chodesh Adar","r"]],"2028-02-28":[["Rosh Chodesh Adar","r"]],"2028-03-09":[["Ta'anis Esther","f"]],"2028-03-11":[["Erev Purim","e"]],"2028-03-12":[["Purim","p"]],"2028-03-13":[["Shushan Purim","p"]],"2028-03-28":[["Rosh Chodesh Nisan","r"]],"2028-04-10":[["Ta'anis Bechoros","f"],["Erev Pesach","e"]],"2028-04-11":[["Pesach I","y"]],"2028-04-12":[["Pesach II","y"]],"2028-04-13":[["Pesach III · Chol Hamoed","c"]],"2028-04-14":[["Pesach IV · Chol Hamoed","c"]],"2028-04-15":[["Pesach V · Chol Hamoed","c"]],"2028-04-16":[["Pesach VI · Chol Hamoed","c"]],"2028-04-17":[["Pesach VII","y"]],"2028-04-18":[["Pesach VIII","y"]],"2028-04-26":[["Rosh Chodesh Iyyar","r"]],"2028-04-27":[["Rosh Chodesh Iyyar","r"]],"2028-05-10":[["Pesach Sheni","m"]],"2028-05-14":[["Lag BaOmer","m"]],"2028-05-26":[["Rosh Chodesh Sivan","r"]],"2028-05-30":[["Erev Shavuos","e"]],"2028-05-31":[["Shavuos I","y"]],"2028-06-01":[["Shavuos II","y"]],"2028-06-24":[["Rosh Chodesh Tamuz","r"]],"2028-06-25":[["Rosh Chodesh Tamuz","r"]],"2028-07-11":[["Tzom Tammuz","f"]],"2028-07-24":[["Rosh Chodesh Av","r"]],"2028-07-31":[["Erev Tish'a B'Av","e"]],"2028-08-01":[["Tish'a B'Av","f"]],"2028-08-07":[["Tu B'Av","m"]],"2028-08-22":[["Rosh Chodesh Elul","r"]],"2028-08-23":[["Rosh Hashana LaBeheimos","m"],["Rosh Chodesh Elul","r"]],"2028-09-16":[["Leil Selichos","m"]],"2028-09-20":[["Erev Rosh Hashana","e"]],"2028-09-21":[["Rosh Hashana I","y"]],"2028-09-22":[["Rosh Hashana II","y"]],"2028-09-24":[["Tzom Gedaliah","f"]],"2028-09-29":[["Erev Yom Kippur","e"]],"2028-09-30":[["Yom Kippur","y"]],"2028-10-04":[["Erev Sukkos","e"]],"2028-10-05":[["Sukkos I","y"]],"2028-10-06":[["Sukkos II","y"]],"2028-10-07":[["Sukkos III · Chol Hamoed","c"]],"2028-10-08":[["Sukkos IV · Chol Hamoed","c"]],"2028-10-09":[["Sukkos V · Chol Hamoed","c"]],"2028-10-10":[["Sukkos VI · Chol Hamoed","c"]],"2028-10-11":[["Sukkos VII (Hoshana Raba)","c"]],"2028-10-12":[["Shmini Atzeres","y"]],"2028-10-13":[["Simchas Torah","y"]],"2028-10-20":[["Rosh Chodesh Cheshvan","r"]],"2028-10-21":[["Rosh Chodesh Cheshvan","r"]],"2028-11-19":[["Rosh Chodesh Kislev","r"]],"2028-12-12":[["Chanukah: 1st light (tonight)","p"]],"2028-12-13":[["Chanukah · 2nd light","p"]],"2028-12-14":[["Chanukah · 3rd light","p"]],"2028-12-15":[["Chanukah · 4th light","p"]],"2028-12-16":[["Chanukah · 5th light","p"]],"2028-12-17":[["Chanukah · 6th light","p"]],"2028-12-18":[["Rosh Chodesh Teves","r"],["Chanukah · 7th light","p"]],"2028-12-19":[["Rosh Chodesh Teves","r"],["Chanukah · 8th light","p"]],"2028-12-20":[["Chanukah · 8th day","p"]],"2028-12-28":[["Asara B'Teves","f"]],"2029-01-17":[["Rosh Chodesh Sh'vat","r"]],"2029-01-31":[["Tu BiShvat","m"]],"2029-02-15":[["Rosh Chodesh Adar","r"]],"2029-02-16":[["Rosh Chodesh Adar","r"]],"2029-02-28":[["Ta'anis Esther","f"],["Erev Purim","e"]],"2029-03-01":[["Purim","p"]],"2029-03-02":[["Shushan Purim","p"]],"2029-03-17":[["Rosh Chodesh Nisan","r"]],"2029-03-30":[["Ta'anis Bechoros","f"],["Erev Pesach","e"]],"2029-03-31":[["Pesach I","y"]],"2029-04-01":[["Pesach II","y"]],"2029-04-02":[["Pesach III · Chol Hamoed","c"]],"2029-04-03":[["Pesach IV · Chol Hamoed","c"]],"2029-04-04":[["Pesach V · Chol Hamoed","c"]],"2029-04-05":[["Pesach VI · Chol Hamoed","c"]],"2029-04-06":[["Pesach VII","y"]],"2029-04-07":[["Pesach VIII","y"]],"2029-04-15":[["Rosh Chodesh Iyyar","r"]],"2029-04-16":[["Rosh Chodesh Iyyar","r"]],"2029-04-29":[["Pesach Sheni","m"]],"2029-05-03":[["Lag BaOmer","m"]],"2029-05-15":[["Rosh Chodesh Sivan","r"]],"2029-05-19":[["Erev Shavuos","e"]],"2029-05-20":[["Shavuos I","y"]],"2029-05-21":[["Shavuos II","y"]],"2029-06-13":[["Rosh Chodesh Tamuz","r"]],"2029-06-14":[["Rosh Chodesh Tamuz","r"]],"2029-07-01":[["Tzom Tammuz","f"]],"2029-07-13":[["Rosh Chodesh Av","r"]],"2029-07-21":[["Erev Tish'a B'Av","e"]],"2029-07-22":[["Tish'a B'Av (observed)","f"]],"2029-07-27":[["Tu B'Av","m"]],"2029-08-11":[["Rosh Chodesh Elul","r"]],"2029-08-12":[["Rosh Hashana LaBeheimos","m"],["Rosh Chodesh Elul","r"]],"2029-09-01":[["Leil Selichos","m"]],"2029-09-09":[["Erev Rosh Hashana","e"]],"2029-09-10":[["Rosh Hashana I","y"]],"2029-09-11":[["Rosh Hashana II","y"]],"2029-09-12":[["Tzom Gedaliah","f"]],"2029-09-18":[["Erev Yom Kippur","e"]],"2029-09-19":[["Yom Kippur","y"]],"2029-09-23":[["Erev Sukkos","e"]],"2029-09-24":[["Sukkos I","y"]],"2029-09-25":[["Sukkos II","y"]],"2029-09-26":[["Sukkos III · Chol Hamoed","c"]],"2029-09-27":[["Sukkos IV · Chol Hamoed","c"]],"2029-09-28":[["Sukkos V · Chol Hamoed","c"]],"2029-09-29":[["Sukkos VI · Chol Hamoed","c"]],"2029-09-30":[["Sukkos VII (Hoshana Raba)","c"]],"2029-10-01":[["Shmini Atzeres","y"]],"2029-10-02":[["Simchas Torah","y"]],"2029-10-09":[["Rosh Chodesh Cheshvan","r"]],"2029-10-10":[["Rosh Chodesh Cheshvan","r"]],"2029-11-08":[["Rosh Chodesh Kislev","r"]],"2029-12-01":[["Chanukah: 1st light (tonight)","p"]],"2029-12-02":[["Chanukah · 2nd light","p"]],"2029-12-03":[["Chanukah · 3rd light","p"]],"2029-12-04":[["Chanukah · 4th light","p"]],"2029-12-05":[["Chanukah · 5th light","p"]],"2029-12-06":[["Chanukah · 6th light","p"]],"2029-12-07":[["Rosh Chodesh Teves","r"],["Chanukah · 7th light","p"]],"2029-12-08":[["Chanukah · 8th light","p"]],"2029-12-09":[["Chanukah · 8th day","p"]],"2029-12-16":[["Asara B'Teves","f"]],"2030-01-05":[["Rosh Chodesh Sh'vat","r"]],"2030-01-19":[["Tu BiShvat","m"]],"2030-02-03":[["Rosh Chodesh Adar I","r"]],"2030-02-04":[["Rosh Chodesh Adar I","r"]],"2030-02-17":[["Purim Koton","p"]],"2030-02-18":[["Shushan Purim Koton","p"]],"2030-03-05":[["Rosh Chodesh Adar II","r"]],"2030-03-06":[["Rosh Chodesh Adar II","r"]],"2030-03-18":[["Ta'anis Esther","f"],["Erev Purim","e"]],"2030-03-19":[["Purim","p"]],"2030-03-20":[["Shushan Purim","p"]],"2030-04-04":[["Rosh Chodesh Nisan","r"]],"2030-04-17":[["Ta'anis Bechoros","f"],["Erev Pesach","e"]],"2030-04-18":[["Pesach I","y"]],"2030-04-19":[["Pesach II","y"]],"2030-04-20":[["Pesach III · Chol Hamoed","c"]],"2030-04-21":[["Pesach IV · Chol Hamoed","c"]],"2030-04-22":[["Pesach V · Chol Hamoed","c"]],"2030-04-23":[["Pesach VI · Chol Hamoed","c"]],"2030-04-24":[["Pesach VII","y"]],"2030-04-25":[["Pesach VIII","y"]],"2030-05-03":[["Rosh Chodesh Iyyar","r"]],"2030-05-04":[["Rosh Chodesh Iyyar","r"]],"2030-05-17":[["Pesach Sheni","m"]],"2030-05-21":[["Lag BaOmer","m"]],"2030-06-02":[["Rosh Chodesh Sivan","r"]],"2030-06-06":[["Erev Shavuos","e"]],"2030-06-07":[["Shavuos I","y"]],"2030-06-08":[["Shavuos II","y"]],"2030-07-01":[["Rosh Chodesh Tamuz","r"]],"2030-07-02":[["Rosh Chodesh Tamuz","r"]],"2030-07-18":[["Tzom Tammuz","f"]],"2030-07-31":[["Rosh Chodesh Av","r"]],"2030-08-07":[["Erev Tish'a B'Av","e"]],"2030-08-08":[["Tish'a B'Av","f"]],"2030-08-14":[["Tu B'Av","m"]],"2030-08-29":[["Rosh Chodesh Elul","r"]],"2030-08-30":[["Rosh Hashana LaBeheimos","m"],["Rosh Chodesh Elul","r"]],"2030-09-21":[["Leil Selichos","m"]],"2030-09-27":[["Erev Rosh Hashana","e"]],"2030-09-28":[["Rosh Hashana I","y"]],"2030-09-29":[["Rosh Hashana II","y"]],"2030-09-30":[["Tzom Gedaliah","f"]],"2030-10-06":[["Erev Yom Kippur","e"]],"2030-10-07":[["Yom Kippur","y"]],"2030-10-11":[["Erev Sukkos","e"]],"2030-10-12":[["Sukkos I","y"]],"2030-10-13":[["Sukkos II","y"]],"2030-10-14":[["Sukkos III · Chol Hamoed","c"]],"2030-10-15":[["Sukkos IV · Chol Hamoed","c"]],"2030-10-16":[["Sukkos V · Chol Hamoed","c"]],"2030-10-17":[["Sukkos VI · Chol Hamoed","c"]],"2030-10-18":[["Sukkos VII (Hoshana Raba)","c"]],"2030-10-19":[["Shmini Atzeres","y"]],"2030-10-20":[["Simchas Torah","y"]],"2030-10-27":[["Rosh Chodesh Cheshvan","r"]],"2030-10-28":[["Rosh Chodesh Cheshvan","r"]],"2030-11-26":[["Rosh Chodesh Kislev","r"]],"2030-11-27":[["Rosh Chodesh Kislev","r"]],"2030-12-20":[["Chanukah: 1st light (tonight)","p"]],"2030-12-21":[["Chanukah · 2nd light","p"]],"2030-12-22":[["Chanukah · 3rd light","p"]],"2030-12-23":[["Chanukah · 4th light","p"]],"2030-12-24":[["Chanukah · 5th light","p"]],"2030-12-25":[["Chanukah · 6th light","p"]],"2030-12-26":[["Rosh Chodesh Teves","r"],["Chanukah · 7th light","p"]],"2030-12-27":[["Rosh Chodesh Teves","r"],["Chanukah · 8th light","p"]],"2030-12-28":[["Chanukah · 8th day","p"]],"2031-01-05":[["Asara B'Teves","f"]],"2031-01-25":[["Rosh Chodesh Sh'vat","r"]],"2031-02-08":[["Tu BiShvat","m"]],"2031-02-23":[["Rosh Chodesh Adar","r"]],"2031-02-24":[["Rosh Chodesh Adar","r"]],"2031-03-06":[["Ta'anis Esther","f"]],"2031-03-08":[["Erev Purim","e"]],"2031-03-09":[["Purim","p"]],"2031-03-10":[["Shushan Purim","p"]],"2031-03-25":[["Rosh Chodesh Nisan","r"]],"2031-04-07":[["Ta'anis Bechoros","f"],["Erev Pesach","e"]],"2031-04-08":[["Pesach I","y"]],"2031-04-09":[["Pesach II","y"]],"2031-04-10":[["Pesach III · Chol Hamoed","c"]],"2031-04-11":[["Pesach IV · Chol Hamoed","c"]],"2031-04-12":[["Pesach V · Chol Hamoed","c"]],"2031-04-13":[["Pesach VI · Chol Hamoed","c"]],"2031-04-14":[["Pesach VII","y"]],"2031-04-15":[["Pesach VIII","y"]],"2031-04-23":[["Rosh Chodesh Iyyar","r"]],"2031-04-24":[["Rosh Chodesh Iyyar","r"]],"2031-05-07":[["Pesach Sheni","m"]],"2031-05-11":[["Lag BaOmer","m"]],"2031-05-23":[["Rosh Chodesh Sivan","r"]],"2031-05-27":[["Erev Shavuos","e"]],"2031-05-28":[["Shavuos I","y"]],"2031-05-29":[["Shavuos II","y"]],"2031-06-21":[["Rosh Chodesh Tamuz","r"]],"2031-06-22":[["Rosh Chodesh Tamuz","r"]],"2031-07-08":[["Tzom Tammuz","f"]],"2031-07-21":[["Rosh Chodesh Av","r"]],"2031-07-28":[["Erev Tish'a B'Av","e"]],"2031-07-29":[["Tish'a B'Av","f"]],"2031-08-04":[["Tu B'Av","m"]],"2031-08-19":[["Rosh Chodesh Elul","r"]],"2031-08-20":[["Rosh Hashana LaBeheimos","m"],["Rosh Chodesh Elul","r"]],"2031-09-13":[["Leil Selichos","m"]],"2031-09-17":[["Erev Rosh Hashana","e"]],"2031-09-18":[["Rosh Hashana I","y"]],"2031-09-19":[["Rosh Hashana II","y"]],"2031-09-21":[["Tzom Gedaliah","f"]],"2031-09-26":[["Erev Yom Kippur","e"]],"2031-09-27":[["Yom Kippur","y"]],"2031-10-01":[["Erev Sukkos","e"]],"2031-10-02":[["Sukkos I","y"]],"2031-10-03":[["Sukkos II","y"]],"2031-10-04":[["Sukkos III · Chol Hamoed","c"]],"2031-10-05":[["Sukkos IV · Chol Hamoed","c"]],"2031-10-06":[["Sukkos V · Chol Hamoed","c"]],"2031-10-07":[["Sukkos VI · Chol Hamoed","c"]],"2031-10-08":[["Sukkos VII (Hoshana Raba)","c"]],"2031-10-09":[["Shmini Atzeres","y"]],"2031-10-10":[["Simchas Torah","y"]],"2031-10-17":[["Rosh Chodesh Cheshvan","r"]],"2031-10-18":[["Rosh Chodesh Cheshvan","r"]],"2031-11-16":[["Rosh Chodesh Kislev","r"]],"2031-12-09":[["Chanukah: 1st light (tonight)","p"]],"2031-12-10":[["Chanukah · 2nd light","p"]],"2031-12-11":[["Chanukah · 3rd light","p"]],"2031-12-12":[["Chanukah · 4th light","p"]],"2031-12-13":[["Chanukah · 5th light","p"]],"2031-12-14":[["Chanukah · 6th light","p"]],"2031-12-15":[["Rosh Chodesh Teves","r"],["Chanukah · 7th light","p"]],"2031-12-16":[["Rosh Chodesh Teves","r"],["Chanukah · 8th light","p"]],"2031-12-17":[["Chanukah · 8th day","p"]],"2031-12-25":[["Asara B'Teves","f"]]};
+const JHM=[["2024-12-01",30,"חשון"],["2024-12-02",1,"כסלו"],["2025-01-01",1,"טבת"],["2025-01-30",1,"שבט"],["2025-03-01",1,"אדר"],["2025-03-30",1,"ניסן"],["2025-04-29",1,"אייר"],["2025-05-28",1,"סיון"],["2025-06-27",1,"תמוז"],["2025-07-26",1,"אב"],["2025-08-25",1,"אלול"],["2025-09-23",1,"תשרי"],["2025-10-23",1,"חשון"],["2025-11-21",1,"כסלו"],["2025-12-21",1,"טבת"],["2026-01-19",1,"שבט"],["2026-02-18",1,"אדר"],["2026-03-19",1,"ניסן"],["2026-04-18",1,"אייר"],["2026-05-17",1,"סיון"],["2026-06-16",1,"תמוז"],["2026-07-15",1,"אב"],["2026-08-14",1,"אלול"],["2026-09-12",1,"תשרי"],["2026-10-12",1,"חשון"],["2026-11-11",1,"כסלו"],["2026-12-11",1,"טבת"],["2027-01-09",1,"שבט"],["2027-02-08",1,"אדר א׳"],["2027-03-10",1,"אדר ב׳"],["2027-04-08",1,"ניסן"],["2027-05-08",1,"אייר"],["2027-06-06",1,"סיון"],["2027-07-06",1,"תמוז"],["2027-08-04",1,"אב"],["2027-09-03",1,"אלול"],["2027-10-02",1,"תשרי"],["2027-11-01",1,"חשון"],["2027-12-01",1,"כסלו"],["2027-12-31",1,"טבת"],["2028-01-29",1,"שבט"],["2028-02-28",1,"אדר"],["2028-03-28",1,"ניסן"],["2028-04-27",1,"אייר"],["2028-05-26",1,"סיון"],["2028-06-25",1,"תמוז"],["2028-07-24",1,"אב"],["2028-08-23",1,"אלול"],["2028-09-21",1,"תשרי"],["2028-10-21",1,"חשון"],["2028-11-19",1,"כסלו"],["2028-12-19",1,"טבת"],["2029-01-17",1,"שבט"],["2029-02-16",1,"אדר"],["2029-03-17",1,"ניסן"],["2029-04-16",1,"אייר"],["2029-05-15",1,"סיון"],["2029-06-14",1,"תמוז"],["2029-07-13",1,"אב"],["2029-08-12",1,"אלול"],["2029-09-10",1,"תשרי"],["2029-10-10",1,"חשון"],["2029-11-08",1,"כסלו"],["2029-12-07",1,"טבת"],["2030-01-05",1,"שבט"],["2030-02-04",1,"אדר א׳"],["2030-03-06",1,"אדר ב׳"],["2030-04-04",1,"ניסן"],["2030-05-04",1,"אייר"],["2030-06-02",1,"סיון"],["2030-07-02",1,"תמוז"],["2030-07-31",1,"אב"],["2030-08-30",1,"אלול"],["2030-09-28",1,"תשרי"],["2030-10-28",1,"חשון"],["2030-11-27",1,"כסלו"],["2030-12-27",1,"טבת"],["2031-01-25",1,"שבט"],["2031-02-24",1,"אדר"],["2031-03-25",1,"ניסן"],["2031-04-24",1,"אייר"],["2031-05-23",1,"סיון"],["2031-06-22",1,"תמוז"],["2031-07-21",1,"אב"],["2031-08-20",1,"אלול"],["2031-09-18",1,"תשרי"],["2031-10-18",1,"חשון"],["2031-11-16",1,"כסלו"],["2031-12-16",1,"טבת"]];
+const HEBN = ["", "א", "ב", "ג", "ד", "ה", "ו", "ז", "ח", "ט", "י", "יא", "יב", "יג", "יד", "טו", "טז", "יז", "יח", "יט", "כ", "כא", "כב", "כג", "כד", "כה", "כו", "כז", "כח", "כט", "ל"];
+const HPRI = { y: 0, f: 1, c: 2, p: 3, e: 4, r: 5, m: 6 };
+function hebDate(k) { // [day letters, month name] from the baked month starts
+  let lo = 0, hi = JHM.length - 1; if (!JHM.length || k < JHM[0][0] || k > "2031-12-31") return null;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (JHM[mid][0] <= k) lo = mid; else hi = mid - 1; }
+  const a = JHM[lo], n = a[1] + Math.round((parse(k) - parse(a[0])) / 864e5), l = HEBN[n]; if (!l) return null;
+  return [l.length > 1 ? l[0] + "״" + l.slice(1) : l + "׳", a[2]];
+}
+function holsOf(k) { return (JHOL[k] || []).slice().sort((a, b) => HPRI[a[1]] - HPRI[b[1]]); }
+function noWork(k) { const h = holsOf(k).filter(x => x[1] === "y"); return h.length ? "Yom Tov: " + h.map(x => x[0]).join(", ") : parse(k).getDay() === 6 ? "Shabbos" : ""; }
+// On the GitHub Pages copy (*.github.io) the access key comes from the link (?k=...) and the data from the Cloudflare worker; the key is never in the code.
+const GH_PAGES = /\.github\.io$/.test(location.hostname), GH_KEY = new URLSearchParams(location.search).get("k") || "";
+const API = GH_PAGES ? "https://calendar.daybook-amy.workers.dev/c/" + encodeURIComponent(GH_KEY) + "/api/" : location.pathname.replace(/\/?$/, "/") + "api/";
+if (GH_PAGES && !GH_KEY) document.addEventListener("DOMContentLoaded", () => { document.body.innerHTML = '<p style="font:18px system-ui;padding:24px">This link is missing its key. Please open the full link you were sent.</p>'; });
+const $ = id => document.getElementById(id);
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const pad = n => String(n).padStart(2, "0");
+const iso = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+const parse = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtTime = t => { let [h, m] = t.split(":").map(Number); const ap = h < 12 ? "AM" : "PM"; h = h % 12 || 12; return h + ":" + pad(m) + " " + ap; };
+const fmtDay = s => parse(s).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+const fmtShort = s => parse(s).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+const mins = t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+const hhmm = m => pad(Math.floor(m / 60) % 24) + ":" + pad(m % 60);
+const endM = e => (e.end_time && mins(e.end_time) > mins(e.time)) ? mins(e.end_time) : mins(e.time) + 60; // no end saved: 1 hour
+const endT = e => hhmm(endM(e));
+const hours = e => (endM(e) - mins(e.time)) / 60;
+const fmtH = h => (Math.round(h * 100) / 100).toString();
+const money = n => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+const nkey = n => n.trim().toLowerCase().replace(/\s+/g, " ");
+const span = e => fmtTime(e.time) + " – " + fmtTime(endT(e));
+
+let view = new Date(); view.setDate(1);
+let tView = new Date(); tView.setDate(1);
+let selected = iso(new Date());
+let entries = [];   // entries in the visible grid range
+let clients = {};   // name key -> {name, rate}
+let editing = null; // entry being edited, or null
+let pending = null; // body waiting for "save anyway"
+let endAuto = true; // end time still follows the start time
+
+async function api(path, opts = {}) {
+  try {
+    const r = await fetch(API + path, { ...opts, headers: { "content-type": "application/json" }, cache: "no-store" });
+    let data = {}; try { data = await r.json(); } catch (e) {}
+    return { status: r.status, data };
+  } catch (e) { return { status: 0, data: {} }; }
+}
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 2200); }
+function range() {
+  const first = new Date(view.getFullYear(), view.getMonth(), 1);
+  const start = new Date(first); start.setDate(1 - first.getDay());
+  const last = new Date(view.getFullYear(), view.getMonth() + 1, 0);
+  const end = new Date(last); end.setDate(last.getDate() + (6 - last.getDay()));
+  return [start, end];
+}
+// Which entries overlap another entry on the same day: id -> [names of the others]
+function overlaps(list) {
+  const out = {}, byDay = {};
+  list.forEach(e => (byDay[e.date] = byDay[e.date] || []).push(e));
+  Object.values(byDay).forEach(day => day.forEach(a => day.forEach(b => {
+    if (a.id !== b.id && mins(a.time) < endM(b) && mins(b.time) < endM(a)) (out[a.id] = out[a.id] || []).push(b.name);
+  })));
+  return out;
+}
+async function loadClients() {
+  const { status, data } = await api("clients");
+  if (status !== 200) return;
+  clients = {}; (data.clients || []).forEach(c => clients[c.name_key] = c);
+}
+async function load() {
+  const [s, e] = range();
+  $("cal").classList.add("loading");
+  const [{ status, data }] = await Promise.all([api("entries?from=" + iso(s) + "&to=" + iso(e)), loadClients()]);
+  $("cal").classList.remove("loading");
+  if (status !== 200) { toast("Could not load. Check the internet and try again."); return; }
+  entries = data.entries; render();
+}
+function render() {
+  $("title").textContent = MONTHS[view.getMonth()] + " " + view.getFullYear();
+  const [s, e] = range(); const today = iso(new Date()); const ov = overlaps(entries);
+  const byDay = {}; entries.forEach(x => (byDay[x.date] = byDay[x.date] || []).push(x));
+  let html = "";
+  for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+    const k = iso(d), list = byDay[k] || [], clash = list.some(x => ov[x.id]);
+    const hols = holsOf(k), hb = hebDate(k), nw = noWork(k);
+    const cls = ["day", d.getMonth() !== view.getMonth() ? "other" : "", k === today ? "today" : "", k === selected ? "sel" : "", clash ? "clash" : "", nw ? "yt" : ""].join(" ");
+    const holHtml = (hb ? '<span class="hd">' + hb[0] + '<span class="hm"> ' + hb[1] + "</span></span>" : "") + (hols.length ? '<span class="hdot hc-' + hols[0][1] + '"></span><span class="hol">' + hols.slice(0, 2).map(x => '<span class="hc-' + x[1] + '" title="' + esc(x[0]) + '">' + esc(x[0]) + "</span>").join("") + "</span>" : "");
+    const names = list.slice(0, 3).map(x => '<span class="chip' + (ov[x.id] ? " c" : "") + '">' + esc(fmtTime(x.time).replace(":00", "").replace(" ", "").toLowerCase() + " " + x.name) + "</span>").join("") + (list.length > 3 ? '<span class="more">+' + (list.length - 3) + " more</span>" : "");
+    html += '<button class="' + cls + '" data-d="' + k + '" aria-label="' + esc(fmtDay(k)) + (hols.length ? ", " + esc(hols.map(x => x[0]).join(", ")) : "") + ", " + list.length + ' booked"><span class="n">' + d.getDate() + "</span>" + holHtml + (list.length ? '<span class="count">' + list.length + '</span><span class="names">' + names + "</span>" : "") + "</button>";
+  }
+  $("grid").innerHTML = html;
+  renderDay();
+}
+function itemHtml(x, ov, withDate) {
+  const others = ov[x.id] || [];
+  const same = others.length && others.every(n => nkey(n) === nkey(x.name));
+  return '<li><button class="item' + (others.length ? " c" : "") + '" data-id="' + x.id + '"><span class="t">' + fmtTime(x.time) + '</span><span><div class="nm">' + esc(x.name) + "</div>" +
+    '<div class="hrs">until ' + fmtTime(endT(x)) + " · " + fmtH(hours(x)) + (hours(x) === 1 ? " hour" : " hours") + "</div>" +
+    (withDate ? '<div class="dt">' + fmtShort(x.date) + "</div>" : "") + (x.note ? '<div class="nt">' + esc(x.note) + "</div>" : "") +
+    (others.length ? '<span class="tag">' + (same ? "CLASH: entered twice" : "CLASH with " + esc(others.join(", "))) + "</span>" : "") + "</span></button></li>";
+}
+function renderDay() {
+  const list = entries.filter(x => x.date === selected); const ov = overlaps(entries);
+  $("dayTitle").textContent = fmtDay(selected);
+  const hb = hebDate(selected), sh = parse(selected).getDay() === 6;
+  $("dayHol").innerHTML = (sh && !holsOf(selected).some(x => x[1] === "y") ? '<span class="hc-y">Shabbos</span>' : "") + holsOf(selected).map(x => '<span class="hc-' + x[1] + '">' + esc(x[0]) + "</span>").join("") + (hb ? '<span class="heb">' + hb[0] + " " + hb[1] + "</span>" : "");
+  const nc = list.filter(x => ov[x.id]).length;
+  $("daySub").textContent = list.length ? list.length + " booked" + (nc ? ", " + nc + " in a clash" : "") : "";
+  $("dayList").innerHTML = list.length ? list.map(x => itemHtml(x, ov)).join("") : '<li class="empty">Nothing booked on this day.</li>';
+}
+function fillNames() {
+  const list = Object.values(clients).sort((a, b) => a.name.localeCompare(b.name));
+  $("fpick").innerHTML = '<option value="">' + (list.length ? "Pick a saved client…" : "No saved clients yet, type below") + "</option>" +
+    list.map(c => '<option value="' + esc(c.name_key) + '">' + esc(c.name) + "</option>").join("");
+  syncPick();
+}
+function syncPick() { const k = nkey($("fname").value || ""); $("fpick").value = clients[k] ? k : ""; }
+function rateFor(name) { const c = clients[nkey(name || "")]; return c && c.rate != null ? c.rate : null; }
+function showHours() {
+  const s = $("ftime").value, e = $("fend").value;
+  $("fhrs").textContent = s && e ? (mins(e) > mins(s) ? fmtH((mins(e) - mins(s)) / 60) + ((mins(e) - mins(s)) === 60 ? " hour" : " hours") : "End must be after start") : "";
+}
+function rateHint() {
+  $("ratehint").textContent = $("fonly").checked ? "Only this booking uses this rate. The client's usual rate stays " + (rateFor($("fname").value) != null ? money(rateFor($("fname").value)) : "unset") + "."
+    : "Saved as this client's usual rate (used for all their bookings).";
+}
+function openForm(entry, date) {
+  editing = entry || null; fillNames();
+  $("formTitle").textContent = entry ? "Change entry" : "Add";
+  $("fname").value = entry ? entry.name : "";
+  $("fdate").value = entry ? entry.date : (date || selected);
+  $("ftime").value = entry ? entry.time : "";
+  $("fend").value = entry ? endT(entry) : "";
+  endAuto = !entry;
+  $("fonly").checked = !!(entry && entry.rate != null);
+  const r = entry ? (entry.rate != null ? entry.rate : rateFor(entry.name)) : null;
+  $("frate").value = r != null ? r : "";
+  $("fnote").value = entry ? entry.note || "" : "";
+  $("delRow").style.display = entry ? "flex" : "none";
+  $("ferr").textContent = ""; $("liveWarn").classList.remove("on");
+  showHours(); rateHint(); syncPick(); holCheck();
+  $("form").showModal();
+  if (entry) liveCheck(); else setTimeout(() => $("fname").focus(), 50);
+}
+function holCheck() {
+  const d = $("fdate").value, w = $("holWarn"); w.className = "holwarn";
+  if (!d) return;
+  const nw = noWork(d), other = holsOf(d).filter(x => x[1] !== "y");
+  if (nw) { w.innerHTML = "This is <b>" + esc(nw) + "</b>." + (other.length ? " (" + esc(other.map(x => x[0]).join(", ")) + ")" : ""); w.className = "holwarn on"; }
+  else if (other.length) { w.textContent = other.map(x => x[0]).join(", "); w.className = "holwarn on soft"; }
+}
+async function liveCheck() {
+  showHours(); holCheck();
+  const d = $("fdate").value, t = $("ftime").value, en = $("fend").value, w = $("liveWarn");
+  if (!d || !t || !en || mins(en) <= mins(t)) { w.classList.remove("on"); return; }
+  let list = entries.filter(x => x.date === d);
+  const [s, e] = range();
+  if (d < iso(s) || d > iso(e)) { const r = await api("entries?from=" + d + "&to=" + d); list = r.data.entries || []; }
+  const hit = list.filter(x => (!editing || x.id !== editing.id) && mins(x.time) < mins(en) && mins(t) < endM(x));
+  if (hit.length) { w.innerHTML = '<span class="wt">This hour is already booked:</span>' + hit.map(x => "<b>" + esc(x.name) + "</b> " + span(x)).join("<br>") + '<div style="font-size:14px;margin-top:4px">' + esc(fmtShort(d)) + ". Pick another time.</div>"; w.classList.add("on"); }
+  else w.classList.remove("on");
+}
+async function submit(force) {
+  let body = pending;
+  if (!force) {
+    const rv = $("frate").value.trim(), only = $("fonly").checked;
+    body = { name: $("fname").value.trim(), date: $("fdate").value, time: $("ftime").value, end: $("fend").value, note: $("fnote").value.trim(),
+             rate: only && rv !== "" ? Number(rv) : null, clientRate: !only && rv !== "" ? Number(rv) : null };
+    if (!body.name) return ($("ferr").textContent = "Please type a name.");
+    if (!body.date) return ($("ferr").textContent = "Please pick a date.");
+    if (!body.time) return ($("ferr").textContent = "Please pick a start time.");
+    if (!body.end) return ($("ferr").textContent = "Please pick an end time.");
+    if (mins(body.end) <= mins(body.time)) return ($("ferr").textContent = "The end time must be after the start time.");
+    if (rv !== "" && !(Number(rv) >= 0)) return ($("ferr").textContent = "The rate must be a number, like 50.");
+  }
+  $("save").disabled = true; $("clashSave").disabled = true;
+  const { status, data } = editing ? await api("entries/" + editing.id, { method: "PUT", body: JSON.stringify({ ...body, force }) })
+                                   : await api("entries", { method: "POST", body: JSON.stringify({ ...body, force }) });
+  $("save").disabled = false; $("clashSave").disabled = false;
+  if (status === 409) {
+    pending = body;
+    $("clashText").innerHTML = "On <b>" + esc(fmtDay(body.date)) + "</b>, " + fmtTime(body.time) + " – " + fmtTime(body.end) + " is already booked by:";
+    $("clashList").innerHTML = data.clash.map(x => '<div class="clashbox"><b>' + esc(x.name) + "</b>, " + span(x) + (x.note ? '<div class="nt">' + esc(x.note) + "</div>" : "") + "</div>").join("") +
+      (data.clash.some(x => nkey(x.name) === nkey(body.name)) ? '<p style="margin:8px 0 0">The same name is already in at this time. It may have been entered twice.</p>' : '<p style="margin:8px 0 0">You are adding <b>' + esc(body.name) + "</b> at an overlapping time.</p>");
+    $("clashDlg").showModal(); return;
+  }
+  if (status !== 200) { if ($("clashDlg").open) $("clashDlg").close(); $("ferr").textContent = (data && data.error) || "Could not save. Check the internet and try again."; return; }
+  if ($("clashDlg").open) $("clashDlg").close();
+  $("form").close(); pending = null;
+  toast(force ? "Saved, marked as a clash" : "Saved");
+  selected = body.date; const d = parse(body.date); view = new Date(d.getFullYear(), d.getMonth(), 1);
+  await load(); if ($("q").value.trim()) search();
+}
+async function search() {
+  const q = $("q").value.trim();
+  if (!q) { $("results").innerHTML = ""; return; }
+  const { data } = await api("search?q=" + encodeURIComponent(q));
+  const list = data.entries || []; const ov = overlaps(entries);
+  $("results").innerHTML = list.length ? list.map(x => itemHtml(x, ov, true)).join("") : '<li class="empty">No one by that name.</li>';
+}
+
+/* ---------- Monthly totals ---------- */
+let tEntries = [];
+async function loadTotals() {
+  const y = tView.getFullYear(), m = tView.getMonth();
+  const from = iso(new Date(y, m, 1)), to = iso(new Date(y, m + 1, 0));
+  $("tTitle").textContent = MONTHS[m] + " " + y;
+  $("rep").innerHTML = '<p class="empty">Loading…</p>';
+  const [{ status, data }] = await Promise.all([api("entries?from=" + from + "&to=" + to), loadClients()]);
+  if (status !== 200) { $("rep").innerHTML = '<p class="empty">Could not load. Check the internet and try again.</p>'; return; }
+  tEntries = data.entries || [];
+  const keys = {}; tEntries.forEach(e => keys[nkey(e.name)] = keys[nkey(e.name)] || e.name);
+  const cur = $("tClient").value;
+  $("tClient").innerHTML = '<option value="">All clients</option>' + Object.entries(keys).sort((a, b) => a[1].localeCompare(b[1])).map(([k, n]) => '<option value="' + esc(k) + '">' + esc(n) + "</option>").join("");
+  $("tClient").value = keys[cur] ? cur : "";
+  const ca = $("tAgency").value, ags = {}; let none = false;
+  Object.keys(keys).forEach(k => { const a = agencyOf(k); if (a) ags[nkey(a)] = ags[nkey(a)] || a; else none = true; });
+  $("tAgency").innerHTML = '<option value="">All agencies</option>' + Object.entries(ags).sort((a, b) => a[1].localeCompare(b[1])).map(([k, n]) => '<option value="' + esc(k) + '">' + esc(n) + "</option>").join("") + (none && Object.keys(ags).length ? '<option value="__none">No agency</option>' : "");
+  $("tAgency").value = ags[ca] || (ca === "__none" && none) ? ca : "";
+  $("tAgency").hidden = !Object.keys(ags).length;
+  renderTotals();
+}
+function agencyOf(k) { return clients[k] && clients[k].agency ? clients[k].agency : ""; }
+function renderTotals() {
+  const only = $("tClient").value, month = $("tTitle").textContent, ag = $("tAgency").hidden ? "" : $("tAgency").value;
+  const agOk = k => !ag || (ag === "__none" ? !agencyOf(k) : nkey(agencyOf(k)) === ag);
+  const groups = {};
+  tEntries.forEach(e => { const k = nkey(e.name); if (only && k !== only) return; if (!agOk(k)) return; (groups[k] = groups[k] || { name: e.name, list: [] }).list.push(e); });
+  const ks = Object.keys(groups).sort((a, b) => groups[a].name.localeCompare(groups[b].name));
+  $("rep").classList.toggle("pb", $("tPb").checked);
+  if (!ks.length) { $("rep").innerHTML = '<p class="empty">No bookings in ' + esc(month) + (ag || only ? " for this choice" : "") + ".</p>"; return; }
+  let gH = 0, gA = 0, gN = 0, missing = 0, html = "";
+  const byAg = ks.some(k => agencyOf(k)), sec = {};
+  ks.forEach(k => {
+    const g = groups[k], cr = clients[k] && clients[k].rate != null ? clients[k].rate : null;
+    let tH = 0, tA = 0, noRate = 0, rows = "";
+    g.list.forEach(e => {
+      const h = hours(e), r = e.rate != null ? e.rate : cr, amt = r != null ? Math.round(h * r * 100) / 100 : null;
+      tH += h; if (amt != null) tA += amt; else noRate++;
+      rows += "<tr><td>" + parse(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + "</td><td>" + parse(e.date).toLocaleDateString("en-US", { weekday: "short" }) + "</td><td>" + span(e) +
+        "</td><td class=r>" + fmtH(h) + "</td></tr>";
+    });
+    gH += tH; gA += tA; gN += g.list.length; missing += noRate;
+    const ak = agencyOf(k) ? nkey(agencyOf(k)) : "~none", S = sec[ak] = sec[ak] || { name: agencyOf(k) || "No agency", h: 0, a: 0, n: 0, c: 0, html: "" };
+    S.h += tH; S.a += tA; S.n += g.list.length; S.c++;
+    S.html += '<section class="client"><h3>' + esc(g.name) + "</h3>" +
+      (byAg ? '<div class="rateline" style="margin-bottom:0">Bills to: <b class="billto">' + esc(agencyOf(k) || "no agency") + "</b></div>" : "") +
+      '<table class="bk" style="margin-top:8px"><colgroup><col style="width:20%"><col style="width:15%"><col><col style="width:16%"></colgroup><thead><tr><th>Date</th><th>Day</th><th>Time</th><th class=r>Hours</th></tr></thead><tbody>' + rows +
+      '<tr class="tot"><td colspan=3>Total, ' + g.list.length + (g.list.length === 1 ? " booking" : " bookings") + "</td><td class=r>" + fmtH(tH) + "</td></tr></tbody></table></section>";
+  });
+  Object.keys(sec).sort((a, b) => a === "~none" ? 1 : b === "~none" ? -1 : sec[a].name.localeCompare(sec[b].name)).forEach(a => {
+    const S = sec[a];
+    html += byAg ? '<section class="agency"><h2 class="ag"><small>Agency</small>' + esc(S.name) + "</h2>" + S.html +
+      '<div class="agtot"><span>' + esc(S.name) + " total, " + esc(month) + "</span><span>" + S.c + (S.c === 1 ? " client" : " clients") + "</span><span>" + S.n + (S.n === 1 ? " booking" : " bookings") + "</span><span>" + fmtH(S.h) + (S.h === 1 ? " hour" : " hours") + "</span></div></section>" : S.html;
+  });
+  const head = '<h2 class="rt">' + (only ? esc(groups[ks[0]].name) + ", " : ag ? esc(ag === "__none" ? "No agency" : agencyOf(ks[0])) + ", " : "") + "Hours, " + esc(month) + '</h2><p class="sub">' + gN + (gN === 1 ? " booking" : " bookings") + (only ? "" : " · " + ks.length + (ks.length === 1 ? " client" : " clients")) + "</p>";
+  const grand = !only && !ag && ks.length > 1 ? '<div class="grand"><div>Clients<b>' + ks.length + '</b></div><div>Bookings<b>' + gN + '</b></div><div>Total hours<b>' + fmtH(gH) + "</b></div></div>" : "";
+  $("rep").innerHTML = head + html + grand;
+}
+function showTab(t) {
+  $("calView").hidden = t !== "cal"; $("cliView").hidden = t !== "cli"; $("totView").hidden = t !== "tot";
+  $("tabCal").classList.toggle("on", t === "cal"); $("tabCli").classList.toggle("on", t === "cli"); $("tabTot").classList.toggle("on", t === "tot");
+  if (t === "tot") { tView = new Date(view.getFullYear(), view.getMonth(), 1); loadTotals(); } else if (t === "cli") loadCli(); else load();
+  history.replaceState(null, "", t === "tot" ? "#totals" : t === "cli" ? "#clients" : "#");
+  scrollTo(0, 0);
+}
+/* ---------- Clients ---------- */
+let editingCli = null;
+async function loadCli() {
+  await loadClients();
+  const list = Object.values(clients).sort((a, b) => a.name.localeCompare(b.name));
+  $("cliSub").textContent = list.length ? list.length + (list.length === 1 ? " client" : " clients") + ". Tap one to change it." : "";
+  $("cliList").innerHTML = list.length ? list.map(c => '<li><button class="cli" data-cli="' + esc(c.name_key) + '"><span><div class="nm">' + esc(c.name) + '</div><div class="meta">' +
+    (c.agency ? '<span class="billto">Bills to ' + esc(c.agency) + "</span> · " : "") + (c.bookings ? c.bookings + (c.bookings == 1 ? " booking" : " bookings") : "No bookings yet") + [c.note].filter(Boolean).map(v => " · " + esc(v)).join("") + '</div></span></button></li>').join("")
+    : '<li class="empty">No clients yet. Tap "+ New client" to add one.</li>';
+}
+const BASE_AGENCIES = ["Hamaspik", "HCS", "Rayim", "Yedei Chesed", "Metropolitan"];
+function agencies() { const m = {}; BASE_AGENCIES.forEach(a => m[nkey(a)] = a); Object.values(clients).forEach(c => { if (c.agency) m[nkey(c.agency)] = m[nkey(c.agency)] || c.agency; }); const base = BASE_AGENCIES.map(nkey); return BASE_AGENCIES.concat(Object.entries(m).filter(([k]) => !base.includes(k)).map(e => e[1]).sort((a, b) => a.localeCompare(b))); }
+function fillAgency(cur) {
+  const list = agencies(); if (cur && !list.some(a => nkey(a) === nkey(cur))) list.push(cur);
+  $("cagency").innerHTML = '<option value="">No agency</option>' + list.map(a => '<option value="' + esc(a) + '">' + esc(a) + "</option>").join("") + '<option value="__new">+ New agency…</option>';
+  $("cagency").value = cur ? list.find(a => nkey(a) === nkey(cur)) : ""; $("cagencyNew").hidden = true; $("cagencyNew").value = "";
+}
+$("cagency").addEventListener("change", () => { const n = $("cagency").value === "__new"; $("cagencyNew").hidden = !n; if (n) $("cagencyNew").focus(); });
+function openCli(c) {
+  editingCli = c || null;
+  $("cliTitle").textContent = c ? "Change client" : "New client";
+  $("cname").value = c ? c.name : ""; $("crate").value = c && c.rate != null ? c.rate : "";
+  $("cphone").value = c && c.phone || ""; $("cemail").value = c && c.email || ""; $("cnote").value = c && c.note || ""; fillAgency(c && c.agency || "");
+  $("cerr").textContent = "";
+  $("cliHint").textContent = c && c.bookings ? "Changing the name also changes it on this client's " + c.bookings + (c.bookings == 1 ? " booking." : " bookings.") + "" : "";
+  $("cDelRow").style.display = c ? "flex" : "none";
+  $("cliDlg").showModal(); if (!c) setTimeout(() => $("cname").focus(), 50);
+}
+$("cf").addEventListener("submit", async e => {
+  e.preventDefault();
+  const name = $("cname").value.trim(), rv = $("crate").value.trim();
+  if (!name) return ($("cerr").textContent = "Please type a name.");
+  if (rv !== "" && !(Number(rv) >= 0)) return ($("cerr").textContent = "The rate must be a number, like 50.");
+  let agency = $("cagency").value;
+  if (agency === "__new") { agency = $("cagencyNew").value.trim().replace(/\s+/g, " "); if (!agency) return ($("cerr").textContent = "Please type the new agency's name, or pick one from the list."); const ex = agencies().find(a => nkey(a) === nkey(agency)); if (ex) agency = ex; }
+  $("cSave").disabled = true;
+  const body = JSON.stringify({ name, rate: rv === "" ? null : Number(rv), phone: $("cphone").value.trim(), email: $("cemail").value.trim(), note: $("cnote").value.trim(), agency });
+  const { status, data } = editingCli ? await api("clients/" + encodeURIComponent(editingCli.name_key), { method: "PUT", body }) : await api("clients", { method: "POST", body });
+  $("cSave").disabled = false;
+  if (status !== 200) return ($("cerr").textContent = (data && data.error) || "Could not save. Check the internet and try again.");
+  $("cliDlg").close(); toast(editingCli ? "Client saved" : "Client added");
+  if (!$("cliView").hidden) loadCli(); else if (!$("calView").hidden) load(); else loadClients();
+});
+$("cCancel").onclick = () => $("cliDlg").close();
+$("cDel").onclick = () => {
+  if (editingCli.bookings > 0) return ($("cerr").textContent = "This client has " + editingCli.bookings + (editingCli.bookings == 1 ? " booking" : " bookings") + ". Delete or change those first.");
+  $("cliDelText").innerHTML = "<b>" + esc(editingCli.name) + "</b>" + (editingCli.agency ? ", bills to " + esc(editingCli.agency) : "") + ". It has no bookings."; $("cliDelDlg").showModal();
+};
+$("cDelNo").onclick = () => $("cliDelDlg").close();
+$("cDelYes").onclick = async () => {
+  const { status, data } = await api("clients/" + encodeURIComponent(editingCli.name_key), { method: "DELETE" });
+  $("cliDelDlg").close();
+  if (status !== 200) return ($("cerr").textContent = (data && data.error) || "Could not delete. Try again.");
+  $("cliDlg").close(); toast("Client deleted"); loadCli();
+};
+$("cliList").addEventListener("click", e => { const b = e.target.closest("[data-cli]"); if (b && clients[b.dataset.cli]) openCli(clients[b.dataset.cli]); });
+$("newClientBtn2").onclick = () => openCli(null);
+$("tabCli").onclick = () => showTab("cli");
+
+$("tabCal").onclick = () => showTab("cal");
+$("tabTot").onclick = () => showTab("tot");
+$("tPrev").onclick = () => { tView = new Date(tView.getFullYear(), tView.getMonth() - 1, 1); loadTotals(); };
+$("tNext").onclick = () => { tView = new Date(tView.getFullYear(), tView.getMonth() + 1, 1); loadTotals(); };
+$("tNow").onclick = () => { const t = new Date(); tView = new Date(t.getFullYear(), t.getMonth(), 1); loadTotals(); };
+$("tClient").onchange = renderTotals;
+$("tAgency").onchange = renderTotals;
+$("tPb").onchange = renderTotals;
+$("printBtn").onclick = () => window.print();
+$("rep").addEventListener("click", async e => {
+  const b = e.target.closest("[data-saverate]"); if (!b) return;
+  const inp = $("rep").querySelector('[data-rate="' + CSS.escape(b.dataset.saverate) + '"]');
+  const v = inp.value.trim(); if (v !== "" && !(Number(v) >= 0)) return toast("The rate must be a number, like 50.");
+  const { status } = await api("clients", { method: "PUT", body: JSON.stringify({ name: inp.dataset.name, rate: v === "" ? null : Number(v) }) });
+  if (status !== 200) return toast("Could not save the rate. Try again.");
+  toast("Rate saved"); loadTotals();
+});
+
+$("grid").addEventListener("click", e => { const b = e.target.closest(".day"); if (!b) return; selected = b.dataset.d;
+  const d = parse(selected); if (d.getMonth() !== view.getMonth()) { view = new Date(d.getFullYear(), d.getMonth(), 1); load(); } else render();
+  if (innerWidth < 860) $("panel").scrollIntoView({ behavior: "smooth", block: "start" }); });
+document.addEventListener("click", async e => { const b = e.target.closest(".item"); if (!b) return;
+  let x = entries.find(o => o.id === b.dataset.id);
+  if (!x) { const { data } = await api("search?q=" + encodeURIComponent($("q").value.trim())); x = (data.entries || []).find(o => o.id === b.dataset.id); }
+  if (x) openForm(x); });
+$("prev").onclick = () => { view = new Date(view.getFullYear(), view.getMonth() - 1, 1); load(); };
+$("next").onclick = () => { view = new Date(view.getFullYear(), view.getMonth() + 1, 1); load(); };
+$("todayBtn").onclick = () => { const t = new Date(); view = new Date(t.getFullYear(), t.getMonth(), 1); selected = iso(t); load(); };
+$("fab").onclick = () => openForm(null, selected);
+$("addDay").onclick = () => openForm(null, selected);
+$("cancel").onclick = () => $("form").close();
+$("f").addEventListener("submit", e => { e.preventDefault(); $("ferr").textContent = ""; pending = null; submit(false); });
+$("ftime").addEventListener("change", () => { const s = $("ftime").value; if (s && (endAuto || !$("fend").value || mins($("fend").value) <= mins(s))) { $("fend").value = hhmm(Math.min(mins(s) + 60, 23 * 60 + 55)); endAuto = true; } liveCheck(); });
+$("ftime").addEventListener("input", () => $("ftime").dispatchEvent(new Event("change")));
+$("fend").addEventListener("change", () => { endAuto = false; liveCheck(); });
+$("fend").addEventListener("input", () => { endAuto = false; liveCheck(); });
+$("fdate").addEventListener("change", liveCheck);
+$("fdate").addEventListener("input", holCheck);
+$("fpick").addEventListener("change", () => { const c = clients[$("fpick").value]; if (!c) return; $("fname").value = c.name; if (!$("fonly").checked) $("frate").value = c.rate != null ? c.rate : ""; rateHint(); $("ferr").textContent = ""; liveCheck(); });
+$("fname").addEventListener("input", () => { syncPick(); if (!$("fonly").checked) { const r = rateFor($("fname").value); if (r != null) $("frate").value = r; } rateHint(); });
+$("fonly").addEventListener("change", () => { if (!$("fonly").checked) { const r = rateFor($("fname").value); if (r != null) $("frate").value = r; } rateHint(); });
+$("clashBack").onclick = () => { $("clashDlg").close(); pending = null; $("ftime").focus(); };
+$("clashSave").onclick = () => submit(true);
+$("del").onclick = () => { $("delText").innerHTML = "<b>" + esc(editing.name) + "</b>, " + esc(fmtShort(editing.date)) + ", " + span(editing); $("delDlg").showModal(); };
+$("delNo").onclick = () => $("delDlg").close();
+$("delYes").onclick = async () => { const d = editing.date; const { status } = await api("entries/" + editing.id, { method: "DELETE" });
+  $("delDlg").close(); if (status !== 200) return toast("Could not delete. Try again.");
+  $("form").close(); toast("Deleted"); selected = d; await load(); if ($("q").value.trim()) search(); };
+let qh; $("q").addEventListener("input", () => { clearTimeout(qh); qh = setTimeout(search, 250); });
+document.addEventListener("visibilitychange", () => { if (document.hidden || document.querySelector("dialog[open]")) return; !$("totView").hidden ? loadTotals() : !$("cliView").hidden ? loadCli() : load(); });
+/* ---------- Upload a file: Excel / CSV / Word / PDF -> clients (+ bookings) ---------- */
+const LIBS = {
+  xlsx: ["https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js", "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"],
+  mammoth: ["https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js", "https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js"],
+  pdf: ["https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js", "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"],
+};
+const libReady = {};
+function loadLib(name, test) {
+  if (test()) return Promise.resolve();
+  return libReady[name] = libReady[name] || (async () => {
+    for (const src of LIBS[name]) {
+      const ok = await new Promise(res => { const s = document.createElement("script"); s.src = src; s.onload = () => res(true); s.onerror = () => { s.remove(); res(false); }; document.head.appendChild(s); });
+      if (ok && test()) { if (name === "pdf") pdfjsLib.GlobalWorkerOptions.workerSrc = src.replace("pdf.min.js", "pdf.worker.min.js"); return; }
+    }
+    libReady[name] = null;
+    throw new Error("lib");
+  })();
+}
+
+const MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12 };
+const MONRE = "(jan|feb|mar|apr|may|jun|jul|aug|sept|sep|oct|nov|dec)[a-z]*\\.?";
+const validDate = (y, m, d) => { const t = new Date(y, m - 1, d); return t.getFullYear() === y && t.getMonth() === m - 1 && t.getDate() === d ? y + "-" + pad(m) + "-" + pad(d) : null; };
+function guessYear(m, d) { // no year written: the year that puts the date nearest to today
+  const now = new Date(), y = now.getFullYear();
+  return [y - 1, y, y + 1].map(yy => [yy, Math.abs(new Date(yy, m - 1, d) - now)]).sort((a, b) => a[1] - b[1])[0][0];
+}
+const fullYear = y => y < 100 ? 2000 + y : y;
+// Finds a date in text. Returns {date, at, len} or null.
+function findDate(s) {
+  let m;
+  if ((m = /\b(\d{4})-(\d{1,2})-(\d{1,2})(?!\d)/.exec(s))) return { date: validDate(+m[1], +m[2], +m[3]), m };
+  if ((m = /\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4}|\d{2})(?!\d)/.exec(s))) {
+    let a = +m[1], b = +m[2]; const y = fullYear(+m[3]);
+    return { date: a > 12 ? validDate(y, b, a) : validDate(y, a, b), m };
+  }
+  if ((m = new RegExp("\\b" + MONRE + "\\s+(\\d{1,2})(?:st|nd|rd|th)?(?!\\d)(?:,?\\s+(\\d{4}))?", "i").exec(s))) {
+    const mo = MON[m[1].toLowerCase()], d = +m[2]; return { date: validDate(m[3] ? +m[3] : guessYear(mo, d), mo, d), m };
+  }
+  if ((m = new RegExp("\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?" + MONRE + "(?:,?\\s+(\\d{4}))?", "i").exec(s))) {
+    const mo = MON[m[2].toLowerCase()], d = +m[1]; return { date: validDate(m[3] ? +m[3] : guessYear(mo, d), mo, d), m };
+  }
+  if ((m = /(?:^|[^\d$.\/])(\d{1,2})\/(\d{1,2})(?![\d\/])/.exec(s))) {
+    const a = +m[1], b = +m[2]; if (a <= 12 && b <= 31) return { date: validDate(guessYear(a, b), a, b), m };
+  }
+  return null;
+}
+// One time like "10", "10:30", "2pm", "2:30 p.m.", "14:00", "noon". Returns minutes or null; ap tells if am/pm was written.
+function oneTime(t) {
+  t = String(t).trim().toLowerCase().replace(/\s+/g, "");
+  if (t === "noon") return { m: 720, ap: true };
+  const m = /^(\d{1,2})(?:[:.](\d{2}))?(?::\d{2})?(a\.?m?\.?|p\.?m?\.?)?$/.exec(t);
+  if (!m) return null;
+  let h = +m[1]; const mi = m[2] ? +m[2] : 0;
+  if (h > 23 || mi > 59) return null;
+  if (m[3]) { if (h > 12 || h === 0) return null; if (m[3][0] === "p" && h < 12) h += 12; if (m[3][0] === "a" && h === 12) h = 0; }
+  return { m: h * 60 + mi, ap: !!m[3], h12: !m[3] && h <= 12 };
+}
+const TIMEPART = "\\d{1,2}(?:[:.]\\d{2})?\\s*(?:[ap]\\.?m?\\.?)?(?![a-z])";
+// A time range "10-11:30", "10am to 12pm", "2:00 PM – 3:30 PM". Returns {time, end, m} or null.
+function findRange(s, loose) {
+  const m = new RegExp("(?:^|[^\\d:/])(" + TIMEPART + ")\\s*(?:-|–|—|to|until|till)\\s*(" + TIMEPART + ")", "i").exec(s);
+  if (!m) return null;
+  const a = oneTime(m[1]), b = oneTime(m[2]);
+  if (!a || !b) return null;
+  if (!loose && !/[:apm]/i.test(m[1] + m[2])) return null; // "3-4" alone is not surely a time
+  let s0 = a.m, e0 = b.m;
+  if (!a.ap && b.ap && a.h12) { const pm = b.m >= 720 && b.m < 1440; if (pm && s0 < 720 && s0 + 720 < e0 + 1) s0 += 720; }
+  if (!a.ap && !b.ap) { if (a.h12 && s0 < 7 * 60) s0 += 720; if (b.h12 && e0 < 7 * 60 + 1) e0 += 720; if (e0 <= s0 && e0 + 720 > s0 && e0 < 720) e0 += 720; }
+  return { time: hhmm(s0), end: hhmm(e0), m };
+}
+function findTime(s, loose) { // a single start time: needs ":" or am/pm (or loose = it is a time column)
+  const m = new RegExp("(?:^|[^\\d:/$])(" + TIMEPART + ")", "i").exec(s);
+  if (!m) return null;
+  const t = oneTime(m[1]); if (!t) return null;
+  if (!loose && !/[:apm]/i.test(m[1])) return null;
+  let v = t.m; if (!t.ap && t.h12 && v < 7 * 60) v += 720;
+  return { time: hhmm(v), m };
+}
+const cut = (s, m) => s.slice(0, m.index) + " " + s.slice(m.index + m[0].length);
+// Rate cell: 50, "$50", "50/hr", "$45.50 per hour". Returns number, null (empty) or NaN (not a number).
+function cellRate(v) {
+  if (typeof v === "number") return v >= 0 ? Math.round(v * 100) / 100 : NaN;
+  const t = String(v || "").toLowerCase().replace(/usd|dollars?|\$|,|\s/g, "").replace(/(\/|per|an?)(hour|hr|h)$/, "").replace(/(hourly|perhour|anhour|\/hr|hr|h)$/, "");
+  if (!t || t === "-" || t === "—") return null;
+  return /^\d+(\.\d+)?$/.test(t) ? Math.round(Number(t) * 100) / 100 : NaN;
+}
+const SKIPNAME = /^(clients?|client list|customers?|customer list|list|names?|rates?|price list|prices|totals?|sub ?totals?|grand total|page \d+.*|notes?|bookings?|schedule|date|time|phone|email)$/i;
+function cleanName(t) {
+  return t.replace(/\b(client|customer|name|rate|hourly|per hour|an hour|a hour|\/\s*hr|\/\s*hour|usd|hrs?|hours?|phone|tel|mobile|cell|email|e-mail)\s*[:=]/gi, " ")
+    .replace(/\b(per hour|an hour|hourly|usd|dollars?)\b/gi, " ").replace(/\b(mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(day|nesday|sday|urday)?\b\.?/gi, " ")
+    .replace(/^[\s\d]{1,3}[.)]\s+/, " ").replace(/[|•·*\t;]+/g, " ").replace(/\s[-–—:,=]+(?=\s|$)/g, " ").replace(/^[\s\-–—:,=()]+|[\s\-–—:,=(]+$/g, "")
+    .replace(/\(\s*\)/g, " ").replace(/\s+/g, " ").trim();
+}
+// A free line of text (Word/PDF line, or a row without a header).
+function parseLine(raw) {
+  let s = " " + String(raw).replace(/\s+/g, " ") + " ";
+  const it = { src: String(raw).trim() };
+  let m;
+  if ((m = /[\w.+-]+@[\w-]+(\.[\w-]+)+/.exec(s))) { it.email = m[0]; s = cut(s, m); }
+  const d = findDate(s); if (d) { it.date = d.date; s = cut(s, d.m); if (!d.date) it.bad = "the date is not a real date"; }
+  const r = findRange(s, !!d); if (r) { it.time = r.time; it.end = r.end; s = cut(s, r.m); }
+  else { const t = findTime(s); if (t) { it.time = t.time; s = cut(s, t.m); } }
+  if ((m = /(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\b/i.exec(s)) && it.time) { it.hours = +m[1]; s = cut(s, m); }
+  if ((m = /\$\s*(\d{1,5}(?:[.,]\d{1,2})?)(?:\s*(?:\/|per|an?)\s*(?:hour|hr|h)\b)?|(\d{1,5}(?:\.\d{1,2})?)\s*(?:\$|usd|dollars?|(?:\/|per|an?)\s*(?:hour|hr|h)\b)/i.exec(s))) { it.rate = Number((m[1] || m[2]).replace(",", ".")); s = cut(s, m); }
+  if ((m = /\+?\(?\d[\d\s().-]{6,}\d/.exec(s)) && m[0].replace(/\D/g, "").length >= 7) { it.phone = m[0].trim(); s = cut(s, m); }
+  if (it.rate == null && (m = /(?:^|[\s|,;:–—=-])(\d{1,3}(?:\.\d{1,2})?)\s*$/.exec(s.trimEnd()))) { it.rate = Number(m[1]); s = s.trimEnd(); s = s.slice(0, m.index) + " " + s.slice(m.index + m[0].length); }
+  it.name = cleanName(s);
+  return it;
+}
+
+// Header names it understands (compared after lowercasing and removing punctuation).
+const HEAD = [
+  ["agency", /^(agency|agency name|billing agency|billed to|bill to|billed|billing|payer|payor|payer name|insurance|insurance company|insurance name|funding|funding source|funder|funded by)$|\bagency\b/],
+  ["email", /^(e ?mail|email address|mail)$/],
+  ["phone", /\b(phone|tel|telephone|mobile|cell|cellphone|whatsapp|phone number|contact number)\b/],
+  ["first", /^(first|first name|firstname|given name)$/],
+  ["last", /^(last|last name|lastname|surname|family name)$/],
+  ["rate", /\b(rate|price|hourly|per hour|per hr|hr rate|fee|cost|charge|pay rate|hourly rate|\$ ?\/ ?hr|\$|usd)\b|^\$$|^\$ ?\/ ?h(ou)?r$|^\$ per hour$/],
+  ["date", /^(date|day|session date|booking date|appointment date|appt date|appointment|session|when|date of service|service date)$/],
+  ["start", /^(start|start time|starts|from|begin|begins|time from|time in|in|start at|starting)$/],
+  ["end", /^(end|end time|ends|to|until|till|finish|finish time|time to|time out|out|end at)$/],
+  ["time", /^(time|times|session time|booking time|appointment time|hours booked)$/],
+  ["hours", /^(hours|hrs|hour|duration|length|hours worked|total hours|no of hours|number of hours|hours billed)$/],
+  ["name", /^(name|names|client|clients|client name|customer|customers|customer name|full name|student|student name|patient|patient name|contact|contact name|company|company name|business|account|account name|member|who)$/],
+  ["note", /\b(notes?|comments?|remarks?|details?|description|address|info|memo)\b/],
+];
+const LABEL = { agency: "agency (bills to)", name: "client name", first: "first name", last: "last name", rate: "rate per hour", phone: "phone", email: "email", note: "note", date: "date", start: "start time", end: "end time", time: "time", hours: "hours" };
+const normHead = v => String(v == null ? "" : v).toLowerCase().replace(/\(.*?\)/g, m => m.includes("$") || /hr|hour/.test(m) ? " " + m.replace(/[()]/g, "") + " " : " ").replace(/[^a-z0-9$\/ ]+/g, " ").replace(/\s+/g, " ").trim();
+function headMap(row) {
+  const map = {}, used = {};
+  row.forEach((c, i) => {
+    const h = normHead(c); if (!h || h.length > 40) return;
+    for (const [k, re] of HEAD) if (re.test(h) && map[k] == null) { map[k] = i; used[i] = k; break; }
+  });
+  return { map, used };
+}
+function findHeader(rows) {
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    const { map, used } = headMap(rows[i]);
+    const n = Object.keys(map).length;
+    if ((map.name != null || map.first != null) && n >= 2) return { at: i, map, used };
+  }
+  return null;
+}
+const blank = v => v == null || String(v).trim() === "";
+const str = v => v == null ? "" : String(v).trim();
+// Excel serial (days since 1899-12-30) or Date -> parts
+function serialParts(n) {
+  if (typeof XLSX !== "undefined" && XLSX.SSF && XLSX.SSF.parse_date_code) { const p = XLSX.SSF.parse_date_code(n); return p && { y: p.y, m: p.m, d: p.d, mi: p.H * 60 + p.M }; }
+  const ms = Math.round((n - 25569) * 86400000), t = new Date(ms);
+  return { y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate(), mi: t.getUTCHours() * 60 + t.getUTCMinutes() };
+}
+function cellDate(v) {
+  if (blank(v)) return {};
+  if (v instanceof Date) return { date: validDate(v.getFullYear(), v.getMonth() + 1, v.getDate()) };
+  if (typeof v === "number") { if (v < 20000 || v > 80000) return { bad: true }; const p = serialParts(v); return { date: validDate(p.y, p.m, p.d), time: v % 1 ? hhmm(p.mi) : null }; }
+  const d = findDate(String(v)); if (!d || !d.date) return { bad: true };
+  const t = findTime(cut(" " + String(v) + " ", { index: d.m.index + 1, 0: d.m[0] }));
+  return { date: d.date, time: t ? t.time : null };
+}
+function cellTime(v) {
+  if (blank(v)) return null;
+  if (typeof v === "number") { if (v >= 0 && v < 1) return hhmm(Math.round(v * 1440)); if (v >= 1 && v <= 24 && v % 1 === 0) return hhmm((v < 7 ? v + 12 : v) * 60); if (v > 1) return v % 1 ? hhmm(serialParts(v).mi) : null; return null; }
+  if (v instanceof Date) return hhmm(v.getHours() * 60 + v.getMinutes());
+  const t = findTime(" " + v + " ", true); return t ? t.time : false;
+}
+// Rows (arrays of cells) of one table -> items.
+function tableItems(rows, where, xs, isLines) {
+  const items = [], h = findHeader(rows);
+  if (!h) { rows.forEach((r, i) => { const line = r.map(str).filter(Boolean).join(" | "); if (line) items.push({ ...parseLine(line), where: where(i) }); }); return { items, cols: null }; }
+  let { map, used, at } = h;
+  if (xs && xs[at]) { // PDF: put each cell under the header nearest to it
+    const hx = xs[at];
+    rows = rows.map((r, i) => {
+      if (i <= at || !xs[i]) return r;
+      const out = new Array(rows[at].length).fill("");
+      r.forEach((c, j) => { const x = xs[i][j]; let best = 0, bd = 1e9; hx.forEach((x0, k) => { const dd = Math.abs(x0.c - x.c); if (dd < bd) { bd = dd; best = k; } }); out[best] = out[best] ? out[best] + " " + c : c; });
+      return out;
+    });
+  }
+  const cols = { used: Object.entries(used).map(([i, k]) => [str(rows[at][i]), LABEL[k]]), unused: rows[at].map((c, i) => used[i] == null && !blank(c) ? str(c) : null).filter(Boolean) };
+  for (let i = 0; i < at; i++) { const line = rows[i].map(str).filter(Boolean).join(" "); if (line) items.push({ src: line, where: where(i), skip: "title above the header row" }); }
+  for (let i = at + 1; i < rows.length; i++) {
+    const r = rows[i], g = k => map[k] != null ? r[map[k]] : undefined;
+    if (r.every(blank)) continue;
+    const src = r.map(str).filter(Boolean).join(" | ");
+    const filled = r.filter(c => !blank(c)).length;
+    if (map.date == null || (isLines && filled === 1)) { // a line that does not fit the table: read it as free text
+      const pl = parseLine(r.map(str).filter(Boolean).join("  "));
+      if ((pl.date && pl.time) || (isLines && filled === 1)) { items.push({ ...pl, src, where: where(i) }); continue; }
+    }
+    const it = { src, where: where(i) };
+    it.name = str(g("name")) || [str(g("first")), str(g("last"))].filter(Boolean).join(" ");
+    it.name = it.name.replace(/\s+/g, " ");
+    if (map.rate != null) { const rv = cellRate(g("rate")); if (Number.isNaN(rv)) it.badRate = str(g("rate")); else if (rv != null) it.rate = rv; }
+    if (!blank(g("phone"))) it.phone = str(g("phone"));
+    if (!blank(g("email"))) it.email = str(g("email"));
+    if (!blank(g("note"))) it.note = str(g("note"));
+    if (map.agency != null && !blank(g("agency"))) it.agency = str(g("agency")).replace(/\s+/g, " ");
+    if (map.date != null && !blank(g("date"))) { const d = cellDate(g("date")); if (d.bad) it.bad = "the date \"" + str(g("date")) + "\" was not understood"; else { it.date = d.date; if (d.time) it.time = d.time; } }
+    const tv = g("time") != null && !blank(g("time")) ? g("time") : (g("start") == null && map.hours != null && typeof g("hours") === "string" && /[-–]/.test(g("hours")) ? g("hours") : null);
+    if (tv != null) { const rg = typeof tv === "string" ? findRange(tv, true) : null; if (rg) { it.time = rg.time; it.end = rg.end; } else { const t = cellTime(tv); if (t) it.time = t; else if (t === false) it.bad = "the time \"" + str(tv) + "\" was not understood"; } }
+    if (map.start != null && !blank(g("start"))) { const sv = g("start"), rg = typeof sv === "string" ? findRange(sv, true) : null; if (rg) { it.time = rg.time; it.end = rg.end; } else { const t = cellTime(sv); if (t) it.time = t; else if (t === false) it.bad = "the start time \"" + str(sv) + "\" was not understood"; } }
+    if (map.end != null && !blank(g("end"))) { const t = cellTime(g("end")); if (t) it.end = t; else if (t === false) it.bad = "the end time \"" + str(g("end")) + "\" was not understood"; }
+    if (map.hours != null && !blank(g("hours")) && !it.end) { const n = typeof g("hours") === "number" ? g("hours") : parseFloat(String(g("hours")).replace(",", ".")); if (n > 0 && n <= 24) it.hours = n; }
+    if (it.time && !it.date && map.date != null) it.bad = it.bad || "it has a time but no date";
+    items.push(it);
+  }
+  return { items, cols };
+}
+
+/* ---- reading each kind of file into tables of rows ---- */
+async function readSheet(buf, isText) {
+  await loadLib("xlsx", () => typeof XLSX !== "undefined");
+  const wb = isText ? XLSX.read(new TextDecoder().decode(buf), { type: "string", raw: true }) : XLSX.read(new Uint8Array(buf), { type: "array" });
+  return wb.SheetNames.map(n => ({ name: n, rows: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: "", blankrows: false }) }));
+}
+// Lines of a Word/PDF text that look like a tab/column table are tried as a table first.
+const splitCells = l => l.split(/\t+|\s{3,}|\s*\|\s*/).map(c => c.trim()).filter((c, i, a) => c || (i > 0 && i < a.length - 1));
+async function readDocx(buf) {
+  await loadLib("mammoth", () => typeof mammoth !== "undefined");
+  const res = await mammoth.convertToHtml({ arrayBuffer: buf });
+  const doc = new DOMParser().parseFromString("<div>" + res.value + "</div>", "text/html");
+  const blocks = [];
+  doc.querySelectorAll("table").forEach((t, n) => {
+    const rows = [...t.querySelectorAll("tr")].filter(tr => tr.closest("table") === t).map(tr => [...tr.children].map(td => td.textContent.replace(/\s+/g, " ").trim()));
+    blocks.push({ name: "Table " + (n + 1), rows });
+  });
+  const lines = [...doc.querySelectorAll("p,li,h1,h2,h3,h4,h5,h6")].filter(p => !p.closest("table") && !p.querySelector("p,li")).map(p => p.textContent.replace(/\u00a0/g, " ").trim()).filter(Boolean);
+  if (lines.length) blocks.push({ name: "Text", rows: lines.map(l => splitCells(l)), lines: true });
+  return blocks;
+}
+async function readPdf(buf) {
+  await loadLib("pdf", () => typeof pdfjsLib !== "undefined");
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf), isEvalSupported: false }).promise;
+  const rows = [], xs = [];
+  for (let p = 1; p <= Math.min(pdf.numPages, 30); p++) {
+    const tc = await (await pdf.getPage(p)).getTextContent();
+    const its = tc.items.filter(i => i.str && i.str.trim()).map(i => ({ s: i.str, x: i.transform[4], y: i.transform[5], w: i.width, h: Math.abs(i.transform[3]) || 10 }));
+    its.sort((a, b) => b.y - a.y || a.x - b.x);
+    const lines = [];
+    its.forEach(i => { const L = lines.find(l => Math.abs(l.y - i.y) < Math.max(3, i.h * 0.4)); if (L) L.items.push(i); else lines.push({ y: i.y, items: [i] }); });
+    lines.sort((a, b) => b.y - a.y).forEach(l => {
+      l.items.sort((a, b) => a.x - b.x);
+      const cells = [];
+      l.items.forEach(i => {
+        const c = cells[cells.length - 1];
+        if (c && i.x - c.r < Math.max(8, i.h * 1.2)) { c.s += (i.x - c.r > i.h * 0.15 && !/\s$/.test(c.s) ? " " : "") + i.s; c.r = i.x + i.w; }
+        else cells.push({ s: i.s, l: i.x, r: i.x + i.w });
+      });
+      rows.push(cells.map(c => c.s.replace(/\s+/g, " ").trim()));
+      xs.push(cells.map(c => ({ l: c.l, r: c.r, c: (c.l + c.r) / 2 })));
+    });
+  }
+  return [{ name: "PDF", rows, xs, lines: true }];
+}
+
+/* ---- from items to a preview ---- */
+let upPlan = null;
+function finishItem(it) {
+  if (it.skip) return it;
+  if (it.bad) return (it.skip = it.bad, it);
+  if (!it.name || !/[a-z\u00c0-\u024f\u0590-\u05ff]/i.test(it.name)) return (it.skip = it.date || it.rate != null ? "no client name" : "no client name found", it);
+  if (SKIPNAME.test(it.name.trim())) return (it.skip = /total/i.test(it.name) ? "a total line, not a client" : "a heading, not a client", it);
+  if (/\b(list|clients|customers|schedule|report|invoice|summary|directory|contacts|price|prices|rates|bookings|sessions)\b/i.test(it.name) || /^(name|client|customer)\b.*\b(rate|price|phone|email)\b/i.test(it.name)) return (it.skip = "a heading, not a client", it);
+  if (/^total\b/i.test(it.name)) return (it.skip = "a total line, not a client", it);
+  if (it.name.length > 60 || it.name.split(" ").length > 6) return (it.skip = "too long to be a name (looks like a sentence)", it);
+  if (it.badRate) return (it.skip = "the rate \"" + it.badRate + "\" is not a number", it);
+  if (it.date && !it.time) return (it.skip = "it has a date but no time", it);
+  if (it.time && !it.date) { delete it.time; delete it.end; }
+  if (it.date && it.time) {
+    it.booking = true;
+    if (!it.end) it.end = hhmm(Math.min(mins(it.time) + Math.round((it.hours || 1) * 60), 23 * 60 + 59)), it.endGuess = !it.hours;
+    if (mins(it.end) <= mins(it.time)) return (it.skip = "the end time is not after the start time", it);
+  }
+  return it;
+}
+async function buildPlan(items, fileName, cols) {
+  items.forEach(finishItem);
+  await loadClients();
+  const ok = items.filter(i => !i.skip);
+  // clients: merge rows with the same name
+  const cmap = {};
+  ok.forEach(i => {
+    const k = nkey(i.name);
+    const c = cmap[k] = cmap[k] || { key: k, name: clients[k] ? clients[k].name : i.name, rates: {}, rows: 0 };
+    c.rows++;
+    if (i.rate != null) { if (!i.booking) c.rate = i.rate; c.rates[i.rate] = (c.rates[i.rate] || 0) + 1; }
+    ["phone", "email", "note", "agency"].forEach(f => { if (i[f] && !i.booking) c[f] = i[f]; else if (i[f] && f !== "note" && !c[f]) c[f] = i[f]; });
+  });
+  const cl = Object.values(cmap).map(c => {
+    if (c.rate == null) { const r = Object.entries(c.rates).sort((a, b) => b[1] - a[1])[0]; if (r) c.rate = Number(r[0]); }
+    const ex = clients[c.key];
+    if (!ex) c.status = "new";
+    else {
+      c.changes = [];
+      ["note", "agency"].forEach(f => { if (c[f] && c[f] !== ex[f]) c.changes.push(f + " " + (ex[f] ? "“" + ex[f] + "” → " : "") + "“" + c[f] + "”"); });
+      c.status = c.changes.length ? "update" : "same";
+    }
+    c.on = c.status !== "same";
+    return c;
+  });
+  // bookings: check against the calendar (duplicates and clashes)
+  const bks = ok.filter(i => i.booking).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  let existing = [];
+  if (bks.length) {
+    const r = await api("entries?from=" + bks[0].date + "&to=" + bks[bks.length - 1].date);
+    if (r.status !== 200) throw new Error("net");
+    existing = r.data.entries || [];
+  }
+  const taken = [];
+  const bk = bks.map(i => {
+    const name = cmap[nkey(i.name)].name, usual = cmap[nkey(i.name)].rate != null ? cmap[nkey(i.name)].rate : rateFor(name);
+    const b = { name, date: i.date, time: i.time, end: i.end, endGuess: i.endGuess, where: i.where, note: i.booking && i.note ? i.note : "", rate: i.rate != null && i.rate !== usual ? i.rate : null };
+    if (existing.some(e => nkey(e.name) === nkey(name) && e.date === b.date && e.time === b.time) || taken.some(e => nkey(e.name) === nkey(name) && e.date === b.date && e.time === b.time && !e.dup)) {
+      b.dup = true; b.on = false; return b;
+    }
+    const s = mins(b.time), en = mins(b.end);
+    const hit = existing.filter(e => e.date === b.date && mins(e.time) < en && s < endM(e)).map(e => e.name).concat(taken.filter(e => !e.dup && e.date === b.date && mins(e.time) < en && s < mins(e.end)).map(e => e.name + " (in this file)"));
+    if (hit.length) { b.clash = hit; b.on = false; } else b.on = true;
+    taken.push(b); return b;
+  });
+  upPlan = { fileName, cols, clients: cl, bookings: bk, skipped: items.filter(i => i.skip) };
+  renderPlan();
+}
+function renderPlan() {
+  const P = upPlan, cl = P.clients, bk = P.bookings;
+  const nNew = cl.filter(c => c.status === "new").length, nUp = cl.filter(c => c.status === "update").length, nSame = cl.filter(c => c.status === "same").length;
+  const nB = bk.filter(b => !b.dup && !b.clash).length, nC = bk.filter(b => b.clash).length, nD = bk.filter(b => b.dup).length;
+  $("upTitle").textContent = "Check before saving";
+  const chip = (n, t, c) => n ? '<span class="' + (c || "") + '">' + n + " " + t + "</span>" : "";
+  let h = '<p class="sub" style="margin:0 0 6px">From <b>' + esc(P.fileName) + "</b>. Nothing is saved until you tap Save all.</p>" +
+    '<div class="sum">' + chip(nNew, "new") + chip(nUp, "updated") + chip(nSame, "already up to date", "s") + chip(nB, nB === 1 ? "booking" : "bookings") + chip(nC, nC === 1 ? "clash" : "clashes", "k") + chip(nD, "already in calendar", "s") + chip(P.skipped.length, P.skipped.length === 1 ? "row skipped" : "rows skipped", "s") + "</div>";
+  if (!cl.length && !bk.length) h += '<p class="norate">No clients were found in this file. Check the format below and try another file.</p>' + FORMAT_HELP;
+  if (P.cols && P.cols.length) h += '<div class="cols">Columns read: ' + P.cols.filter(c => !/rate|phone|email/.test(c[1])).map(c => "<b>" + esc(c[0]) + "</b> as " + c[1]).join(", ") + (P.unused && P.unused.length ? ". Not used: " + P.unused.map(esc).join(", ") : "") + ".</div>";
+  const cRow = (c, i) => '<label class="urow"><input type="checkbox" data-uc="' + i + '"' + (c.on ? " checked" : "") + '><span><div class="u1">' + esc(c.name) + "</div><div class=u2>" +
+    (c.status === "update" ? '<span class="ch">' + esc(c.changes.join(", ")) + "</span>" : [c.agency ? "bills to " + c.agency : "", c.note].filter(Boolean).map(esc).join(" · ")) + "</div></span></label>";
+  if (nNew) h += '<div class="ugrp"><h4>New clients (' + nNew + ")</h4>" + cl.map((c, i) => c.status === "new" ? cRow(c, i) : "").join("") + "</div>";
+  if (nUp) h += '<div class="ugrp"><h4>Clients to update (' + nUp + ")</h4>" + cl.map((c, i) => c.status === "update" ? cRow(c, i) : "").join("") + "</div>";
+  if (bk.length) h += '<div class="ugrp"><h4>Bookings for the calendar (' + bk.length + ")</h4>" + bk.map((b, i) => '<label class="urow' + (b.clash ? " c" : "") + (b.dup ? " sk" : "") + '"><input type="checkbox" data-ub="' + i + '"' + (b.on ? " checked" : "") + (b.dup ? " disabled" : "") + '><span><div class="u1">' + esc(b.name) + "</div><div class=u2>" + esc(fmtShort(b.date)) + ", " + fmtTime(b.time) + " – " + fmtTime(b.end) + (b.endGuess ? " (no end given: 1 hour)" : "") + "" + "</div>" +
+    (b.dup ? '<div class="u2">Already in the calendar, will not be added again.</div>' : "") + (b.clash ? '<span class="tag">CLASH with ' + esc(b.clash.join(", ")) + '</span><div class="u2">Not ticked. Tick it to save it anyway (it will show red).</div>' : "") + "</span></label>").join("") + "</div>";
+  if (nSame) h += '<details class="ugrp"><summary>Already up to date (' + nSame + ")</summary>" + cl.map(c => c.status === "same" ? '<div class="urow sk"><span><div class="u1">' + esc(c.name) + "</div><div class=u2>Nothing new in the file.</div></span></div>" : "").join("") + "</details>";
+  if (P.skipped.length) h += '<details class="ugrp"' + (P.skipped.length <= 6 ? " open" : "") + "><summary>Skipped rows (" + P.skipped.length + ")</summary>" + P.skipped.map(i => '<div class="urow sk"><span><div class="u1">' + esc(i.src.slice(0, 90)) + '</div><div class="u2">' + esc(i.where) + ": " + esc(i.skip) + "</div></span></div>").join("") + "</details>";
+  $("upBody").innerHTML = h;
+  updSave();
+}
+function updSave() {
+  const n = upPlan ? upPlan.clients.filter(c => c.on).length + upPlan.bookings.filter(b => b.on).length : 0;
+  $("upSave").hidden = !upPlan; $("upSave").disabled = !n;
+  $("upSave").textContent = n ? "Save all (" + n + ")" : "Nothing to save";
+}
+const FORMAT_HELP = '<div class="cols" style="margin-top:12px"><b>What the file can look like</b><br>A table (Excel, Word or PDF) with a header row: <b>Name</b> (or Client, Customer), and if you like <b>Agency</b> (or Billed to, Payer) and <b>Notes</b>.<br>For bookings add <b>Date</b>, <b>Start</b>, <b>End</b> (or Time like 10:00-11:30, or Hours).</div>';
+async function readUpload(file) {
+  upPlan = null; $("uperr").textContent = ""; $("upTitle").textContent = "Reading the file…";
+  $("upBody").innerHTML = '<p><span class="spin"></span>Reading <b>' + esc(file.name) + "</b>…</p>"; updSave();
+  if (!$("upDlg").open) $("upDlg").showModal();
+  const ext = (file.name.split(".").pop() || "").toLowerCase();
+  try {
+    if (file.size > 15 * 1024 * 1024) throw new Error("big");
+    const buf = await file.arrayBuffer();
+    let blocks;
+    if (["xlsx", "xlsm", "xls", "ods"].includes(ext)) blocks = await readSheet(buf, false);
+    else if (["csv", "txt"].includes(ext)) blocks = await readSheet(buf, true);
+    else if (ext === "docx") blocks = await readDocx(buf);
+    else if (ext === "pdf") blocks = await readPdf(buf);
+    else if (ext === "doc") throw new Error("doc");
+    else throw new Error("type");
+    const items = []; let cols = [], unused = [];
+    blocks.forEach(b => {
+      const where = i => (b.lines ? "Line " : "Row ") + (i + 1) + (blocks.length > 1 && !b.lines ? " of " + b.name : "");
+      const r = tableItems(b.rows, where, b.xs, b.lines);
+      if (r.cols) { cols = cols.concat(r.cols.used); unused = unused.concat(r.cols.unused); }
+      items.push(...r.items);
+    });
+    if (ext === "pdf" && !blocks[0].rows.length) throw new Error("scan");
+    const seen = {}; cols = cols.filter(c => !seen[c[0] + c[1]] && (seen[c[0] + c[1]] = 1));
+    await buildPlan(items, file.name, cols);
+    upPlan.unused = [...new Set(unused)]; renderPlan();
+  } catch (e) {
+    const msg = { doc: "This is an old Word file (.doc). Please open it in Word and save it as .docx, then upload that.", type: "This kind of file can't be read. Please upload an Excel (.xlsx, .xls, .csv), Word (.docx) or PDF file.",
+      scan: "This PDF has no text in it (it is probably a scanned picture). Please upload the Excel or Word file instead.", big: "This file is too big (over 15 MB).",
+      lib: "Could not load the file reader. Check the internet and try again.", net: "Could not reach the calendar. Check the internet and try again." }[e && e.message] || "Could not read this file. If it has a password, remove it. Or try saving it as Excel or Word.";
+    $("upTitle").textContent = "Upload a file"; $("upBody").innerHTML = '<p class="norate">' + esc(msg) + "</p>" + FORMAT_HELP; upPlan = null; updSave();
+    console.error(e);
+  }
+}
+async function saveUpload() {
+  const P = upPlan; if (!P) return;
+  const cl = P.clients.filter(c => c.on).map(c => ({ name: c.name, note: c.note || "", agency: c.agency || "" }));
+  const bk = P.bookings.filter(b => b.on).map(b => ({ name: b.name, date: b.date, time: b.time, end: b.end, rate: null, note: b.note }));
+  $("upSave").disabled = true; $("upSave").textContent = "Saving…"; $("uperr").textContent = "";
+  const tot = { added: 0, updated: 0, booked: 0, dup: 0 };
+  for (let i = 0; i < Math.max(cl.length, bk.length); i += 40) {
+    const { status, data } = await api("import", { method: "POST", body: JSON.stringify({ clients: cl.slice(i, i + 40), bookings: bk.slice(i, i + 40) }) });
+    if (status !== 200) { $("uperr").textContent = (tot.added + tot.updated + tot.booked ? "Part was saved (" + (tot.added + tot.updated) + " clients, " + tot.booked + " bookings). " : "") + "Could not save. Check the internet and try again."; updSave(); return; }
+    Object.keys(tot).forEach(k => tot[k] += data[k] || 0);
+  }
+  $("upDlg").close(); upPlan = null;
+  toast("Saved: " + [tot.added && tot.added + " new", tot.updated && tot.updated + " updated", tot.booked && tot.booked + (tot.booked === 1 ? " booking" : " bookings")].filter(Boolean).join(", "));
+  if (tot.booked) { const d = parse(bk[0].date); selected = bk[0].date; showTab("cal"); view = new Date(d.getFullYear(), d.getMonth(), 1); load(); } else showTab("cli");
+}
+function pickUpload() { $("upFile").value = ""; $("upFile").click(); }
+$("upBtn2").onclick = pickUpload;
+$("upFile").addEventListener("change", () => { const f = $("upFile").files[0]; if (f) readUpload(f); });
+$("upCancel").onclick = () => { $("upDlg").close(); upPlan = null; };
+$("upSave").onclick = saveUpload;
+$("upBody").addEventListener("change", e => {
+  const t = e.target; if (!upPlan) return;
+  if (t.dataset.uc != null) upPlan.clients[t.dataset.uc].on = t.checked;
+  if (t.dataset.ub != null) upPlan.bookings[t.dataset.ub].on = t.checked;
+  updSave();
+});
+
+if (location.hash === "#totals") showTab("tot"); else if (location.hash === "#clients") showTab("cli"); else load();
+</script>
+</body>
+</html>
