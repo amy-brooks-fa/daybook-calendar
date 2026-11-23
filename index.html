@@ -133,6 +133,8 @@ table.bk td{border-bottom:1px solid #EFEAE1;padding:8px 4px;vertical-align:top}
 table.bk .r{text-align:right;white-space:nowrap}
 table.bk td:nth-child(1),table.bk td:nth-child(2){white-space:nowrap}
 .rep{margin-top:20px}
+table.bk tr.hasw td{border-bottom:0;padding-bottom:2px}
+table.bk tr.why td{white-space:normal;word-break:break-word;padding:0 4px 8px;color:var(--muted);font-size:14px;line-height:1.35}
 table.bk tr.tot td{border-bottom:0;border-top:2px solid var(--ink);font-weight:700;padding-top:10px}
 .ov{display:block;font-size:12px;color:var(--muted)}
 .grand{margin-top:16px;background:var(--ink);color:#fff;border-radius:var(--r);padding:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -152,6 +154,8 @@ table.bk tr.tot td{border-bottom:0;border-top:2px solid var(--ink);font-weight:7
   .grand{background:#fff;color:#000;border:2px solid #000;break-inside:avoid}
   .grand div{opacity:1}
   table.bk{font-size:11pt}
+  table.bk tr.why td{font-size:10pt;color:#444}
+  table.bk tr.hasw,table.bk tr.why{break-inside:avoid}
 }
 .crow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px}
 .btn.outline{border:2px solid var(--accent);color:var(--accent);background:#fff}
@@ -688,8 +692,8 @@ function renderTotals() {
     g.list.forEach(e => {
       const h = hours(e), r = e.rate != null ? e.rate : cr, amt = r != null ? Math.round(h * r * 100) / 100 : null;
       tH += h; if (amt != null) tA += amt; else noRate++;
-      rows += "<tr><td>" + parse(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + "</td><td>" + parse(e.date).toLocaleDateString("en-US", { weekday: "short" }) + "</td><td>" + span(e) +
-        "</td><td class=r>" + fmtH(h) + "</td></tr>";
+      rows += "<tr" + (e.note ? ' class="hasw"' : "") + "><td>" + parse(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + "</td><td>" + parse(e.date).toLocaleDateString("en-US", { weekday: "short" }) + "</td><td>" + span(e) +
+        "</td><td class=r>" + fmtH(h) + "</td></tr>" + (e.note ? '<tr class="why"><td colspan=4>' + esc(e.note) + "</td></tr>" : ""); // Round 11: what was done, under each day
     });
     gH += tH; gA += tA; gN += g.list.length; missing += noRate;
     const ak = agencyOf(k) ? nkey(agencyOf(k)) : "~none", S = sec[ak] = sec[ak] || { name: agencyOf(k) || "No agency", h: 0, a: 0, n: 0, c: 0, html: "" };
