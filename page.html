@@ -159,6 +159,13 @@ table.bk tr.tot td{border-bottom:0;border-top:2px solid var(--ink);font-weight:7
 .cli .nm{font-weight:600;font-size:18px;word-break:break-word}.cli .meta{font-size:14px;color:var(--muted)}
 .cli .rt{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}.cli .rt.none{color:var(--muted);font-weight:500}
 .f.sel{appearance:auto;-webkit-appearance:menulist;font-weight:500}
+.row2 .f.tsel{font-size:17px;padding:0 6px}
+.opt{font-weight:400;color:var(--muted);font-size:14px}
+.done{display:grid;gap:8px}
+.done label{display:flex;align-items:center;gap:12px;margin:0;min-height:50px;padding:10px 14px;border:1px solid #CFC8BB;border-radius:var(--r);background:#fff;font-weight:500;font-size:17px;line-height:1.3;cursor:pointer}
+.done input{width:24px;height:24px;flex:none;accent-color:var(--accent);margin:0}
+.done label:has(input:checked){border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+#fother{margin-top:8px}
 .btn.up{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:10px;border-style:dashed;border-color:#B9B1A3}
 .btn.up svg{width:20px;height:20px;flex:none}
 .uphint{font-size:14px;color:var(--muted);margin:8px 0 0}
@@ -278,8 +285,8 @@ details.ugrp summary{cursor:pointer;font-size:13px;letter-spacing:.06em;text-tra
     <input class="f" id="fdate" type="date">
     <div class="holwarn" id="holWarn"></div>
     <div class="row2">
-      <div><label for="ftime">Start</label><input class="f" id="ftime" type="time" step="300"></div>
-      <div><label for="fend">End</label><input class="f" id="fend" type="time" step="300"></div>
+      <div><label for="ftime">Start</label><select class="f sel tsel" id="ftime"></select></div>
+      <div><label for="fend">End</label><select class="f sel tsel" id="fend"></select></div>
     </div>
     <div class="hint" id="fhrs"></div>
     <div class="warn" id="liveWarn"></div>
@@ -289,8 +296,9 @@ details.ugrp summary{cursor:pointer;font-size:13px;letter-spacing:.06em;text-tra
     <label class="chk"><input type="checkbox" id="fonly"> Different rate just for this booking</label>
     <div class="hint" id="ratehint">Saved as this client's usual rate.</div>
     </div>
-    <label for="fnote">Note (optional)</label>
-    <textarea class="f" id="fnote" maxlength="300" placeholder="Anything to remember"></textarea>
+    <label>What was done <span class="opt">(tap all that fit)</span></label>
+    <div class="done" id="fdone"></div>
+    <input class="f" id="fother" maxlength="200" autocomplete="off" placeholder="Type it; next time it is a choice" hidden>
     <div class="err" id="ferr"></div>
     <div class="actions">
       <button type="button" class="btn" id="cancel">Cancel</button>
@@ -421,6 +429,53 @@ let clients = {};   // name key -> {name, rate}
 let editing = null; // entry being edited, or null
 let pending = null; // body waiting for "save anyway"
 let endAuto = true; // end time still follows the start time
+/* "What was done" choices in the booking form (Round 10). Add more here; saved as text in the booking's note, joined with ", ".
+   Anything typed in "+ Add another" and saved once shows as a choice next time on every phone/link: doneSaved = every item found in saved booking notes. */
+const DONE_OPTIONS = ["Looking for community classes", "Looking for a worker", "Helping worker with billing"];
+let doneSaved = [], doneAt = 0;
+const splitNote = n => (n || "").split(/\s*,\s*/).map(x => x.trim()).filter(Boolean);
+async function loadDone() { // all items used in saved bookings (refreshed at most once a minute)
+  if (Date.now() - doneAt < 60000) return false;
+  const r = await api("entries?from=1900-01-01&to=2999-12-31"); if (r.status !== 200) return false;
+  doneAt = Date.now(); const seen = new Set(DONE_OPTIONS.map(o => o.toLowerCase())), out = [];
+  (r.data.entries || []).forEach(e => splitNote(e.note).forEach(x => { if (x.length <= 80 && !seen.has(x.toLowerCase())) { seen.add(x.toLowerCase()); out.push(x); } }));
+  const changed = out.join("|") !== doneSaved.join("|"); doneSaved = out.sort((a, b) => a.localeCompare(b)); return changed;
+}
+/* Time lists (Round 10): 15-minute steps, values stay "HH:MM" 24h as before. Start list shows 7:00 AM-11:45 PM first, early morning at the bottom. */
+const STEP = 15, DAY_FROM = 7 * 60, LAST_END = 23 * 60 + 59;
+const durTxt = m => { if (m < 60) return m + " min"; const h = Math.floor(m / 60), r = m % 60, fr = { 15: "¼", 30: "½", 45: "¾" }; return r === 0 ? h + " hr" : fr[r] ? h + fr[r] + " hr" : h + " hr " + r + " min"; };
+const tOpt = (m, sel, from) => '<option value="' + hhmm(m) + '"' + (sel === m ? " selected" : "") + ">" + fmtTime(hhmm(m)) + (from != null ? " (" + durTxt(m - from) + ")" : "") + "</option>";
+function fillStart(val) { // val "HH:MM" or ""
+  const v = val ? mins(val) : null, day = [], early = [];
+  for (let m = 0; m < 24 * 60; m += STEP) (m < DAY_FROM ? early : day).push(m);
+  if (v != null && v % STEP) (v < DAY_FROM ? early : day).push(v); // saved time off the 15-min grid, e.g. 12:20
+  day.sort((a, b) => a - b); early.sort((a, b) => a - b);
+  $("ftime").innerHTML = '<option value=""' + (v == null ? " selected" : "") + ">Pick a time</option>" + day.map(m => tOpt(m, v)).join("") +
+    '<optgroup label="Early morning">' + early.map(m => tOpt(m, v)).join("") + "</optgroup>";
+}
+function fillEnd(val) { // list after the start time, with the length beside each
+  const s = $("ftime").value ? mins($("ftime").value) : null, v = val ? mins(val) : null, list = [];
+  for (let m = s != null ? Math.floor(s / STEP) * STEP + STEP : 0; m < 24 * 60; m += STEP) list.push(m);
+  if (s != null && !list.includes(LAST_END)) list.push(LAST_END);
+  if (v != null && !list.includes(v)) list.push(v);
+  list.sort((a, b) => a - b);
+  $("fend").innerHTML = '<option value=""' + (v == null ? " selected" : "") + ">" + (s != null ? "Pick a time" : "Pick start first") + "</option>" +
+    list.map(m => tOpt(m, v, s != null && m > s ? s : null)).join("");
+}
+function fillDone(note) {
+  const opts = DONE_OPTIONS.concat(doneSaved), parts = splitNote(note), lc = opts.map(o => o.toLowerCase());
+  const on = new Set(), rest = [];
+  parts.forEach(x => { const i = lc.indexOf(x.toLowerCase()); i >= 0 ? on.add(i) : rest.push(x); });
+  $("fdone").innerHTML = opts.map((o, i) => '<label><input type="checkbox" value="' + esc(o) + '"' + (on.has(i) ? " checked" : "") + "> " + esc(o) + "</label>").join("") +
+    '<label><input type="checkbox" id="fotherOn"' + (rest.length ? " checked" : "") + "> + Add another (type it)</label>";
+  $("fother").value = rest.join(", "); $("fother").hidden = !rest.length;
+  $("fotherOn").onchange = () => { $("fother").hidden = !$("fotherOn").checked; if (!$("fother").hidden) $("fother").focus(); };
+}
+function doneNote() {
+  const pick = [...$("fdone").querySelectorAll("input[value]:checked")].map(x => x.value);
+  if ($("fotherOn").checked && $("fother").value.trim()) pick.push($("fother").value.trim());
+  return pick.join(", ").slice(0, 300);
+}
 
 async function api(path, opts = {}) {
   try {
@@ -513,13 +568,14 @@ function openForm(entry, date) {
   $("formTitle").textContent = entry ? "Change entry" : "Add";
   $("fname").value = entry ? entry.name : "";
   $("fdate").value = entry ? entry.date : (date || selected);
-  $("ftime").value = entry ? entry.time : "";
-  $("fend").value = entry ? endT(entry) : "";
+  fillStart(entry ? entry.time : "");
+  fillEnd(entry ? endT(entry) : "");
   endAuto = !entry;
   $("fonly").checked = !!(entry && entry.rate != null);
   const r = entry ? (entry.rate != null ? entry.rate : rateFor(entry.name)) : null;
   $("frate").value = r != null ? r : "";
-  $("fnote").value = entry ? entry.note || "" : "";
+  fillDone(entry ? entry.note : "");
+  loadDone().then(ch => { if (ch && $("form").open) fillDone(doneNote()); });
   $("delRow").style.display = entry ? "flex" : "none";
   $("ferr").textContent = ""; $("liveWarn").classList.remove("on");
   showHours(); rateHint(); syncPick(); holCheck();
@@ -548,7 +604,7 @@ async function submit(force) {
   let body = pending;
   if (!force) {
     const rv = $("frate").value.trim(), only = $("fonly").checked;
-    body = { name: $("fname").value.trim(), date: $("fdate").value, time: $("ftime").value, end: $("fend").value, note: $("fnote").value.trim(),
+    body = { name: $("fname").value.trim(), date: $("fdate").value, time: $("ftime").value, end: $("fend").value, note: doneNote(),
              rate: only && rv !== "" ? Number(rv) : null, clientRate: !only && rv !== "" ? Number(rv) : null };
     if (!body.name) return ($("ferr").textContent = "Please type a name.");
     if (!body.date) return ($("ferr").textContent = "Please pick a date.");
@@ -571,7 +627,7 @@ async function submit(force) {
   if (status !== 200) { if ($("clashDlg").open) $("clashDlg").close(); $("ferr").textContent = (data && data.error) || "Could not save. Check the internet and try again."; return; }
   if ($("clashDlg").open) $("clashDlg").close();
   $("form").close(); pending = null;
-  toast(force ? "Saved, marked as a clash" : "Saved");
+  doneAt = 0; toast(force ? "Saved, marked as a clash" : "Saved");
   selected = body.date; const d = parse(body.date); view = new Date(d.getFullYear(), d.getMonth(), 1);
   await load(); if ($("q").value.trim()) search();
 }
@@ -739,10 +795,10 @@ $("fab").onclick = () => openForm(null, selected);
 $("addDay").onclick = () => openForm(null, selected);
 $("cancel").onclick = () => $("form").close();
 $("f").addEventListener("submit", e => { e.preventDefault(); $("ferr").textContent = ""; pending = null; submit(false); });
-$("ftime").addEventListener("change", () => { const s = $("ftime").value; if (s && (endAuto || !$("fend").value || mins($("fend").value) <= mins(s))) { $("fend").value = hhmm(Math.min(mins(s) + 60, 23 * 60 + 55)); endAuto = true; } liveCheck(); });
-$("ftime").addEventListener("input", () => $("ftime").dispatchEvent(new Event("change")));
+$("ftime").addEventListener("change", () => { const s = $("ftime").value; let e = $("fend").value;
+  if (s && (endAuto || !e || mins(e) <= mins(s))) { e = hhmm(Math.min(mins(s) + 60, LAST_END)); endAuto = true; }
+  fillEnd(e); liveCheck(); });
 $("fend").addEventListener("change", () => { endAuto = false; liveCheck(); });
-$("fend").addEventListener("input", () => { endAuto = false; liveCheck(); });
 $("fdate").addEventListener("change", liveCheck);
 $("fdate").addEventListener("input", holCheck);
 $("fpick").addEventListener("change", () => { const c = clients[$("fpick").value]; if (!c) return; $("fname").value = c.name; if (!$("fonly").checked) $("frate").value = c.rate != null ? c.rate : ""; rateHint(); $("ferr").textContent = ""; liveCheck(); });
@@ -753,7 +809,7 @@ $("clashSave").onclick = () => submit(true);
 $("del").onclick = () => { $("delText").innerHTML = "<b>" + esc(editing.name) + "</b>, " + esc(fmtShort(editing.date)) + ", " + span(editing); $("delDlg").showModal(); };
 $("delNo").onclick = () => $("delDlg").close();
 $("delYes").onclick = async () => { const d = editing.date; const { status } = await api("entries/" + editing.id, { method: "DELETE" });
-  $("delDlg").close(); if (status !== 200) return toast("Could not delete. Try again.");
+  $("delDlg").close(); if (status !== 200) return toast("Could not delete. Try again."); doneAt = 0;
   $("form").close(); toast("Deleted"); selected = d; await load(); if ($("q").value.trim()) search(); };
 let qh; $("q").addEventListener("input", () => { clearTimeout(qh); qh = setTimeout(search, 250); });
 document.addEventListener("visibilitychange", () => { if (document.hidden || document.querySelector("dialog[open]")) return; !$("totView").hidden ? loadTotals() : !$("cliView").hidden ? loadCli() : load(); });
