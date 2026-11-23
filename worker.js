@@ -128,8 +128,9 @@ async function handle(req, env) {
             return json({ ok: true });
           }
           const data = String(b.data), kind = String(b.kind || "");
-          if (!/^(docx|xlsx)$/.test(kind)) return json({ error: "Only Word (.docx) or Excel (.xlsx) files." }, 400);
-          if (!/^[A-Za-z0-9+/=]+$/.test(data) || data.length > 4200000) return json({ error: "The file is too big (3 MB at most)." }, 400);
+          // Round 13: PDF or Word only for new uploads (Excel dropped by the owner); a key "client:<name>" = that one client's own sheet.
+          if (!/^(docx|pdf)$/.test(kind)) return json({ error: "Only PDF or Word (.docx) files." }, 400);
+          if (!/^[A-Za-z0-9+/=]+$/.test(data) || data.length > 8400000) return json({ error: "The file is too big (6 MB at most)." }, 400);
           const CH = 700000, st = [env.DB.prepare("DELETE FROM sheet_parts WHERE agency_key=?").bind(ak)];
           for (let i = 0; i * CH < data.length; i++) st.push(env.DB.prepare("INSERT INTO sheet_parts (agency_key,idx,data) VALUES (?,?,?)").bind(ak, i, data.slice(i * CH, (i + 1) * CH)));
           st.push(env.DB.prepare("INSERT INTO sheets (agency_key,agency,filename,kind,size,parts,mapping,updated_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(agency_key) DO UPDATE SET agency=excluded.agency,filename=excluded.filename,kind=excluded.kind,size=excluded.size,parts=excluded.parts,mapping=excluded.mapping,updated_at=excluded.updated_at")
@@ -196,6 +197,10 @@ async function handle(req, env) {
           env.DB.prepare("UPDATE clients SET name_key=?, name=?, rate=?, updated_at=?" + extra.map(f => "," + f + "=?").join("") + " WHERE name_key=?")
             .bind(nk, name, num(b.rate), now, ...extra.map(f => txt(b[f], f === "phone" ? 40 : f === "email" ? 120 : f === "agency" || f === "medicaid" ? (f === "agency" ? 80 : 40) : 300) || null), old),
           env.DB.prepare("UPDATE entries SET name=?, updated_at=? WHERE lower(name)=?").bind(name, now, old),
+          // Round 13: the client's own cover sheet follows a rename
+          ...(nk !== old ? [env.DB.prepare("DELETE FROM sheets WHERE agency_key=?").bind("client:" + nk), env.DB.prepare("DELETE FROM sheet_parts WHERE agency_key=?").bind("client:" + nk),
+            env.DB.prepare("UPDATE sheets SET agency_key=?, agency=? WHERE agency_key=?").bind("client:" + nk, name, "client:" + old),
+            env.DB.prepare("UPDATE sheet_parts SET agency_key=? WHERE agency_key=?").bind("client:" + nk, "client:" + old)] : []),
         ]);
         return json({ ok: true });
       }
@@ -203,7 +208,8 @@ async function handle(req, env) {
         const old = decodeURIComponent(id);
         const c = await env.DB.prepare("SELECT COUNT(*) AS n FROM entries WHERE lower(name)=?").bind(old).first();
         if (c && c.n > 0) return json({ error: "This client has " + c.n + " booking(s). Delete or change those first." }, 409);
-        await env.DB.prepare("DELETE FROM clients WHERE name_key=?").bind(old).run();
+        await env.DB.batch([env.DB.prepare("DELETE FROM clients WHERE name_key=?").bind(old),
+          env.DB.prepare("DELETE FROM sheets WHERE agency_key=?").bind("client:" + old), env.DB.prepare("DELETE FROM sheet_parts WHERE agency_key=?").bind("client:" + old)]); // Round 13: and its own sheet
         return json({ ok: true });
       }
       if (parts[3] === "clients" && !id && req.method === "PUT") {

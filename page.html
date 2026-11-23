@@ -154,8 +154,28 @@ table.bk tr.tot td{border-bottom:0;border-top:2px solid var(--ink);font-weight:7
 .covprev section.docx{transform-origin:top left;margin:0 auto 8px!important;box-shadow:0 1px 4px rgba(0,0,0,.15)}
 .xprev{background:#fff;padding:8px;overflow:auto}.xprev table,#printArea table{border-collapse:collapse;font-size:13px}.xprev td,#printArea .xprev td{border:1px solid #ccc;padding:3px 6px;white-space:nowrap}
 .repcov{margin-top:10px;height:44px;width:100%}
-#coverDlg{width:min(860px,calc(100% - 16px))}
+#coverDlg,#mapDlg{width:min(860px,calc(100% - 16px))}
 #printArea{display:none}
+.csheet{margin-top:16px;border:1px solid var(--line);border-radius:10px;padding:12px;background:#FBFAF7;display:flex;flex-direction:column;gap:8px}
+.csheet .cshead{font-weight:700;font-size:17px}.csheet .meta{font-size:15px;color:var(--muted);word-break:break-word}.csheet .btn{height:50px;width:100%}.csheet .covbtn{margin-top:4px}
+.covfix{width:100%;height:46px;margin:-4px 0 10px}
+.mh{margin:14px 0 2px;font-size:16px}
+.tapchips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.tapchips .chip{border:1px solid var(--line);background:#fff;border-radius:18px;padding:7px 11px;font-size:14px;min-height:38px;cursor:pointer}
+.tapchips .chip.done{background:#E7F3EA;border-color:#7DB38A}.tapchips .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tapbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}.tapbar .btn{height:40px;padding:0 12px}
+.tapwhite{display:flex;gap:8px;align-items:center;font-size:15px;margin:4px 0 8px}
+.tapwrap{overflow:auto;border:1px solid var(--line);border-radius:6px;background:#EDEAE4;max-height:70vh}
+.tapwrap.zoom .tappage{width:200%}
+.tappage{position:relative;width:100%;line-height:0;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.tappage img{width:100%;display:block}
+.pdfprev .tappage{margin-bottom:8px;border:1px solid var(--line)}
+.tapmk{position:absolute;border:2px solid #1F6FD1;background:rgba(31,111,209,.15);pointer-events:none;box-sizing:border-box}
+.tapmk.sel{border-color:#C0392B;background:rgba(192,57,43,.18)}.tapmk.later{border:1px dashed #888;background:rgba(0,0,0,.04)}
+.tapmk span{position:absolute;left:0;bottom:100%;background:#1F6FD1;color:#fff;font:600 10px/1.2 system-ui,sans-serif;padding:1px 3px;white-space:nowrap;border-radius:3px 3px 0 0}
+.tapmk.sel span{background:#C0392B}
+.covprev img.pdfpg{width:100%;display:block;margin:0 0 8px;box-shadow:0 1px 4px rgba(0,0,0,.15);background:#fff}
+#printArea img.pdfpg{display:block;max-width:100%;max-height:247mm;width:auto;height:auto;margin:0 auto;page-break-after:always;break-after:page}
 @media print{
   body.printcover > *:not(#printArea){display:none!important}
   body.printcover #printArea{display:block}
@@ -281,7 +301,7 @@ details.ugrp summary{cursor:pointer;font-size:13px;letter-spacing:.06em;text-tra
     <button class="btn up" id="upBtn2" style="width:100%;height:54px;margin-top:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Upload a file (Excel, Word, PDF)</button>
     <p class="uphint">The file can be a list of clients with columns like <b>Name</b>, <b>Agency</b> (or Billed to), <b>Medicaid #</b>, <b>Notes</b>. Bookings with <b>Date</b>, <b>Start</b>, <b>End</b> and <b>Client</b> are added to the calendar too. You see everything before it is saved.</p>
     <input type="file" id="upFile" accept=".xlsx,.xls,.xlsm,.csv,.ods,.txt,.docx,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf" hidden>
-    <button class="btn outline" id="sheetsBtn" style="width:100%;height:54px;margin-top:12px;font-size:17px">Agency cover sheets (Word / Excel)</button>
+    <button class="btn outline" id="sheetsBtn" style="width:100%;height:54px;margin-top:12px;font-size:17px">Agency cover sheets (PDF / Word)</button>
     <p class="sub" id="cliSub" style="margin-top:12px"></p>
     <ul class="list" id="cliList"></ul>
   </div>
@@ -331,6 +351,7 @@ details.ugrp summary{cursor:pointer;font-size:13px;letter-spacing:.06em;text-tra
     <label>What was done <span class="opt">(tap all that fit)</span></label>
     <div class="done" id="fdone"></div>
     <input class="f" id="fother" maxlength="200" autocomplete="off" placeholder="Type it; next time it is a choice" hidden>
+    <div class="err" id="doneErr"></div>
     <div class="err" id="ferr"></div>
     <div class="actions">
       <button type="button" class="btn" id="cancel">Cancel</button>
@@ -366,7 +387,14 @@ details.ugrp summary{cursor:pointer;font-size:13px;letter-spacing:.06em;text-tra
       <button type="button" class="btn" id="cCancel">Cancel</button>
       <button type="submit" class="btn primary" id="cSave">Save</button>
     </div>
-    <button type="button" class="btn outline covbtn" id="cCover">Billing cover sheet</button>
+    <div class="csheet" id="cSheetBox" hidden>
+      <div class="cshead">Billing cover sheet</div>
+      <div class="meta" id="cSheetInfo"></div>
+      <button type="button" class="btn up" id="cSheetUp">Upload last month's sheet (PDF or Word)</button>
+      <div class="shbtns"><button type="button" class="btn" id="cSheetMap" hidden>Check spots</button><button type="button" class="btn danger" id="cSheetRm" hidden>Remove</button></div>
+      <div class="err" id="cSheetErr"></div>
+      <button type="button" class="btn primary covbtn" id="cCover">Fill it for a month: download / print</button>
+    </div>
     <div class="actions" id="cDelRow" style="margin-top:10px"><button type="button" class="btn danger" id="cDel">Delete this client</button></div>
   </form>
 </dialog>
@@ -421,9 +449,9 @@ details.ugrp summary{cursor:pointer;font-size:13px;letter-spacing:.06em;text-tra
 <dialog id="sheetsDlg">
   <div class="dlg">
     <h3>Agency cover sheets</h3>
-    <p class="sub" style="margin-top:-8px">Upload each agency's billing cover sheet once (Word .docx or Excel .xlsx). Then open a client and tap <b>Billing cover sheet</b>: the name, Medicaid #, month and every day's hours are filled in for you.</p>
+    <p class="sub" style="margin-top:-8px">An agency's sheet (PDF or Word) is used for its clients who don't have a sheet of their own. To give one client his own sheet, open the client and tap <b>Upload last month's sheet</b>.</p>
     <ul class="list shlist" id="shList"></ul>
-    <input type="file" id="sheetFile" accept=".docx,.xlsx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+    
     <div class="err" id="shErr"></div>
     <div class="actions"><button type="button" class="btn" id="shClose">Close</button></div>
   </div>
@@ -444,11 +472,13 @@ details.ugrp summary{cursor:pointer;font-size:13px;letter-spacing:.06em;text-tra
     <div id="covInfo"></div>
     <div class="err" id="covErr"></div>
     <div class="covbtns"><button type="button" class="btn primary" id="covDl">Download file</button><button type="button" class="btn outline" id="covPrint">Print</button></div>
+    <button type="button" class="btn covfix" id="covFix" hidden>Fix where things go</button>
     <div class="covprev" id="covPrev"></div>
     <div class="actions"><button type="button" class="btn" id="covClose">Close</button></div>
   </div>
 </dialog>
 <div id="printArea"></div>
+<input type="file" id="sheetFile" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png" hidden>
 
 <script>
 /* Jewish holidays, diaspora (2-day Yom Tov), Ashkenazi spelling. Generated with @hebcal/core 6.16.1 on 2026-11-22. Range 2025-2031. */
@@ -543,6 +573,7 @@ function fillDone(note) {
       '<input class="f det" maxlength="120" autocomplete="off" placeholder="More details (optional)" value="' + esc(on[i] || "") + '"' + (i in on ? "" : " hidden") + "></div>").join("") +
     '<div class="dopt"><label><input type="checkbox" id="fotherOn"' + (rest.length ? " checked" : "") + "> + Add another (type it)</label></div>";
   $("fother").value = rest.map(x => x.c + (x.d ? ": " + x.d : "")).join("; "); $("fother").hidden = !rest.length;
+  $("doneErr").textContent = ""; $("fdone").onchange = () => { $("doneErr").textContent = ""; }; $("fother").oninput = () => { $("doneErr").textContent = ""; };
   $("fotherOn").onchange = () => { $("fother").hidden = !$("fotherOn").checked; if (!$("fother").hidden) $("fother").focus(); };
   $("fdone").querySelectorAll("input[type=checkbox][value]").forEach(cb => cb.onchange = () => { const d = cb.closest(".dopt").querySelector(".det"); d.hidden = !cb.checked; });
 }
@@ -687,6 +718,9 @@ async function submit(force) {
     if (!body.end) return ($("ferr").textContent = "Please pick an end time.");
     if (mins(body.end) <= mins(body.time)) return ($("ferr").textContent = "The end time must be after the start time.");
     if (rv !== "" && !(Number(rv) >= 0)) return ($("ferr").textContent = "The rate must be a number, like 50.");
+    if (!body.note) { // Round 13: owner: "You can't save it without putting in one option"
+      $("doneErr").textContent = $("fotherOn").checked && !$("fother").value.trim() ? "Type what was done, or tick one above." : "Pick what was done first (tick at least one).";
+      $("doneErr").scrollIntoView({ block: "center", behavior: "smooth" }); return; }
   }
   $("save").disabled = true; $("clashSave").disabled = true;
   const { status, data } = editing ? await api("entries/" + editing.id, { method: "PUT", body: JSON.stringify({ ...body, force }) })
@@ -1304,7 +1338,8 @@ $("upBody").addEventListener("change", e => {
 });
 
 if (location.hash === "#totals") showTab("tot"); else if (location.hash === "#clients") showTab("cli"); else load();
-/* ---------- Round 12: agency billing cover sheets (Word .docx / Excel .xlsx) ----------
+/* ---------- Round 12: agency billing cover sheets; Round 13: PDF or Word only (no Excel uploads), and each client can have his own sheet ----------
+   Which sheet a client uses: his own (key "client:<name>", uploaded on his page) -> else his agency's -> else the plain built-in Word sheet.
    Each agency's own form is uploaded once (Clients tab -> Agency cover sheets), stored on the server.
    "Billing cover sheet" (client dialog or Totals) fills it for one client + month:
    client name, Medicaid #, agency, month, every booking (date, day, start, end, hours, what was done), total hours.
@@ -1342,13 +1377,15 @@ const b64 = { enc: u8 => { let s = ""; for (let i = 0; i < u8.length; i += 0x800
 const fmtUS = s => { const [y, m, d] = s.split("-"); return m + "/" + d + "/" + y; };
 
 /* ---- the data for one client + month ---- */
+// "What was done" on each line: "Choice - detail; Choice" (empty / punctuation-only details left out)
+const doneText = n => parseNote(n).map(x => (x.c || "") + (x.d && /[A-Za-z0-9\u0590-\u05FF]/.test(x.d) ? " - " + x.d : "")).filter(Boolean).join("; ");
 async function coverData(ck, y, m) {
   const c = clients[ck] || { name: ck };
   const from = iso(new Date(y, m, 1)), to = iso(new Date(y, m + 1, 0));
   const r = await api("entries?from=" + from + "&to=" + to);
   const list = (r.data.entries || []).filter(e => nkey(e.name) === ck).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   let tot = 0;
-  const rows = list.map(e => { const h = hours(e); tot += h; return { date: fmtUS(e.date), day: parse(e.date).toLocaleDateString("en-US", { weekday: "short" }), start: fmtTime(e.time), end: fmtTime(endT(e)), time: span(e), hours: Math.round(h * 100) / 100, done: e.note || "" }; });
+  const rows = list.map(e => { const h = hours(e); tot += h; return { date: fmtUS(e.date), day: parse(e.date).toLocaleDateString("en-US", { weekday: "short" }), start: fmtTime(e.time), end: fmtTime(endT(e)), time: span(e), hours: Math.round(h * 100) / 100, done: doneText(e.note) }; });
   return { name: c.name, medicaid: c.medicaid || "", agency: c.agency || "", month: MONTHS[m] + " " + y, total: Math.round(tot * 100) / 100, today: fmtUS(iso(new Date())), rows };
 }
 const cvVal = (d, k) => k === "total" ? String(d.total) : d[k] != null ? String(d[k]) : "";
@@ -1446,6 +1483,8 @@ function docxPlan(M, mapping) {
     if (cand[0]) plan.table = { tbl: cand[0].tbl, tr: cand[0].tr, cols: pick(cand[0]), label: cand[0].text, hand: !!hand };
   }
   if (mapping.table === "none") plan.table = null;
+  if (plan.table && !plan.table.tmpl && mapping.cols) Object.entries(mapping.cols).forEach(([ro, v]) => { if (v === "auto") return; // Round 13: a column picked by hand
+    Object.keys(plan.table.cols).forEach(ci => { if (plan.table.cols[ci] === ro) delete plan.table.cols[ci]; }); if (v !== "none") plan.table.cols[v] = ro; });
   if (plan.table) plan.fields.total = (plan.fields.total || []).filter(x => x.hand || x.how === "ph" || !plan.table.tbl.contains(x.sp.p));
   return plan;
 }
@@ -1613,6 +1652,280 @@ async function xlsxFill(M, plan, d) {
   return await M.zip.generateAsync({ type: "uint8array", compression: "DEFLATE", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
 
+/* ================= Round 13: PDF cover sheets =================
+   Two kinds of PDF:
+   - with boxes to fill in (a "fillable" form): each value goes into a box; boxes found by their names or the words
+     next to / above them; "Check spots" lets him pick the box by hand. Rows = the boxes in the same column, top to bottom.
+   - flat (a scan / photo / printed PDF, no boxes): he taps on the page where each thing goes (name, Medicaid #, month,
+     row 1 of the table for each column, row 2 = row height, last row). The text is stamped there; a white box can
+     cover last month's writing first. Rows that don't fit go on an extra page at the end. */
+LIBS.pdflib = ["https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js", "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js", "https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"];
+const pdfLibs = () => Promise.all([loadLib("pdflib", () => window.PDFLib && window.PDFLib.PDFDocument), loadLib("pdf", () => typeof pdfjsLib !== "undefined")]);
+const PDF_ROLES = ["date", "day", "start", "end", "time", "hours", "done"];
+const ROLE_LONG = { date: "Date", day: "Day", start: "Start", end: "End", time: "Time (start–end)", hours: "Hours", done: "What was done" };
+const pjsOpen = u8 => pdfjsLib.getDocument({ data: u8.slice(), isEvalSupported: false }).promise; // pdf.js takes the buffer away, so give it a copy
+// a photo (jpg/png) of the paper sheet becomes a one-page PDF
+async function imageToPdf(u8, isPng) {
+  await pdfLibs(); const doc = await PDFLib.PDFDocument.create();
+  const img = isPng ? await doc.embedPng(u8) : await doc.embedJpg(u8);
+  const w = 612, h = Math.round(612 * img.height / img.width); const pg = doc.addPage([w, h]); pg.drawImage(img, { x: 0, y: 0, width: w, height: h });
+  return await doc.save();
+}
+const fNameClean = n => String(n || "").split(".").pop().replace(/\[\d+\]/g, "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[_\-]+/g, " ").replace(/\d+/g, " ").replace(/\s+/g, " ").trim();
+async function pdfModel(u8) {
+  await pdfLibs();
+  let doc; try { doc = await PDFLib.PDFDocument.load(u8, { ignoreEncryption: true, updateMetadata: false }); } catch (e) { throw new Error("This PDF can't be opened (it may be damaged or locked)."); }
+  const pj = await pjsOpen(u8), pages = [], texts = [];
+  for (let i = 1; i <= pj.numPages && i <= 20; i++) {
+    const pg = await pj.getPage(i), vp = pg.getViewport({ scale: 1 });
+    pages.push({ vp, w: vp.width, h: vp.height });
+    const tc = await pg.getTextContent();
+    texts.push(tc.items.filter(t => t.str && t.str.trim()).map(t => ({ s: t.str.trim(), x: t.transform[4], y: t.transform[5], w: t.width, h: Math.abs(t.transform[3]) || 10 })));
+  }
+  const refs = doc.getPages().map(p => p.ref), fields = [];
+  let form = null; try { form = doc.getForm(); } catch (e) {}
+  (form ? form.getFields() : []).forEach(f => {
+    if (!(f instanceof PDFLib.PDFTextField)) return;
+    f.acroField.getWidgets().forEach((wd, wi) => {
+      const r = wd.getRectangle(); let p = refs.findIndex(ref => wd.P() && ref === wd.P());
+      if (p < 0) p = doc.getPages().findIndex(pg => { const an = pg.node.Annots(); return an && an.asArray().some(a => a === doc.context.getObjectRef(wd.dict)); });
+      if (p < 0) p = 0;
+      const nm = f.getName(); let tu = ""; try { const t = f.acroField.dict.get(PDFLib.PDFName.of("TU")); tu = t ? t.decodeText() : ""; } catch (e) {}
+      fields.push({ id: nm + (wi ? "#" + wi : ""), name: nm, wi, tu, p, x: r.x, y: r.y, w: r.width, h: r.height });
+    });
+  });
+  return { kind: "pdf", u8, pj, pages, texts, fields, hasText: texts.some(t => t.length > 3) };
+}
+// words printed just left of a box, or just above it (a column header)
+function nearText(M, f, above) {
+  const T = M.texts[f.p] || []; let best = null, bd = 1e9;
+  T.forEach(t => {
+    if (!above) { const cy = f.y + f.h / 2; if (t.x + t.w <= f.x + 3 && Math.abs(t.y + t.h * 0.35 - cy) < Math.max(f.h, 8)) { const d = f.x - (t.x + t.w); if (d < bd && d < 160) { bd = d; best = t; } } }
+    else { if (t.y > f.y + f.h - 2 && t.y < f.y + f.h + 40 && t.x < f.x + f.w && t.x + t.w > f.x) { const d = t.y - (f.y + f.h); if (d < bd) { bd = d; best = t; } } }
+  });
+  return best ? best.s.replace(/[:_\s]+$/, "") : "";
+}
+const sortTop = (a, b) => a.p - b.p || b.y - a.y || a.x - b.x;
+function pdfColumn(M, first, used) { // boxes in the same column as `first`, from it downwards
+  return M.fields.filter(f => f.p === first.p && Math.abs(f.x - first.x) < 4 && Math.abs(f.w - first.w) < 8 && f.y <= first.y + 1 && !used.has(f.id)).sort(sortTop);
+}
+function pdfPlan(M, mp) {
+  mp = mp || {};
+  if (M.fields.length && mp.mode !== "tap") return pdfFormPlan(M, mp);
+  const plan = { mode: "tap", spots: {}, rows: null, white: mp.white !== false, guessed: false };
+  if (mp.spots || mp.rows) { plan.spots = JSON.parse(JSON.stringify(mp.spots || {})); plan.rows = mp.rows ? JSON.parse(JSON.stringify(mp.rows)) : null; return plan; }
+  // nothing placed yet: guess from the printed words (only when the PDF has real text, not a scan)
+  M.texts.forEach((T, p) => T.forEach(t => {
+    const i = t.s.indexOf(":"), lab = (i >= 0 ? t.s.slice(0, i) : t.s).replace(/[_\s]+$/, ""), k = fieldOf(lab);
+    if (!k || plan.spots[k]) return;
+    const cw = t.w / Math.max(1, t.s.length), x = i >= 0 ? t.x + cw * (i + 1) + 4 : t.x + t.w + 4;
+    plan.spots[k] = { p, x, y: t.y + t.h * 0.35, w: Math.min(170, M.pages[p].w - x - 20) }; plan.guessed = true;
+  }));
+  for (let p = 0; p < M.texts.length && !plan.rows; p++) {
+    const lines = []; M.texts[p].forEach(t => { const L = lines.find(l => Math.abs(l.y - t.y) < 3); if (L) L.items.push(t); else lines.push({ y: t.y, items: [t] }); });
+    lines.sort((a, b) => b.y - a.y);
+    for (const L of lines) {
+      const cols = {}; L.items.sort((a, b) => a.x - b.x).forEach(t => { const ro = roleOf(t.s); if (ro && !cols[ro] && !fieldOf(t.s)) cols[ro] = { x: t.x }; });
+      const v = Object.keys(cols); if (v.length < 2 || !(v.includes("date") || v.includes("hours"))) continue;
+      const hh = Math.max(...L.items.map(t => t.h)), xs = Object.values(cols).map(c => c.x);
+      plan.rows = { p, y1: L.y - hh * 1.6, h: Math.max(14, hh * 1.8), cols, guessed: true }; plan.guessed = true;
+      // lines under the header: last month's writing gives the line height; a "Total" line gives the end of the table
+      const below = lines.filter(l => l.y < L.y - 2), tot = below.find(l => /^total/i.test(l.items.slice().sort((a, b) => a.x - b.x)[0].s));
+      const filled = below.filter(l => (!tot || l.y > tot.y + 2) && l.items.some(t => xs.some(x => Math.abs(t.x - x) < 8)));
+      if (filled.length >= 2) { plan.rows.h = filled[0].y - filled[1].y; plan.rows.y1 = filled[0].y + Math.min(...filled[0].items.map(t => t.h)) * 0.35; }
+      else if (filled.length === 1) plan.rows.y1 = filled[0].y + filled[0].items[0].h * 0.35;
+      if (tot) { plan.rows.n = Math.max(1, Math.round((plan.rows.y1 - (tot.y + tot.items[0].h * 0.35)) / plan.rows.h));
+        if (plan.spots.total && cols.hours && Math.abs(plan.spots.total.y - (tot.y + tot.items[0].h * 0.35)) < 3) Object.assign(plan.spots.total, { x: cols.hours.x, w: 40 }); }
+      break;
+    }
+  }
+  pdfWidths(M, plan); return plan;
+}
+function pdfWidths(M, plan) { // column widths: up to the next column
+  const R = plan.rows; if (!R) return;
+  const xs = Object.entries(R.cols).sort((a, b) => a[1].x - b[1].x);
+  xs.forEach(([ro, c], i) => { if (c.w) return; const nx = xs[i + 1]; c.w = nx ? Math.max(12, nx[1].x - c.x - 6) : Math.max(20, Math.min(230, M.pages[R.p].w - c.x - 40)); });
+}
+function pdfFormPlan(M, mp) {
+  const plan = { mode: "form", fields: {}, cols: {}, rows: 0 }, used = new Set(), hand = mp.fields || {}, handC = mp.cols || {};
+  const byId = id => M.fields.find(f => f.id === id);
+  const lab = f => [fNameClean(f.name), f.tu, nearText(M, f)].filter(Boolean);
+  // single values first (by hand, then by name / tooltip / words to the left)
+  CV_FIELDS.forEach(([k]) => { const v = hand[k]; if (v && v !== "auto") { if (v !== "none" && byId(v)) { plan.fields[k] = byId(v); used.add(v); } else plan.fields[k] = null; } });
+  M.fields.slice().sort(sortTop).forEach(f => { if (used.has(f.id)) return; for (const t of lab(f)) { const k = fieldOf(t); if (k && plan.fields[k] === undefined) { plan.fields[k] = f; used.add(f.id); break; } } });
+  // table columns
+  PDF_ROLES.forEach(ro => { const v = handC[ro]; if (v && v !== "auto") plan.cols[ro] = v !== "none" && byId(v) ? byId(v) : null; });
+  const cand = {}; // per column: the box with the most boxes under it wins (then the highest)
+  M.fields.slice().sort(sortTop).forEach(f => { if (used.has(f.id)) return; for (const t of [fNameClean(f.name), f.tu, nearText(M, f, true)].filter(Boolean)) { const ro = roleOf(t); if (ro && plan.cols[ro] === undefined && !fieldOf(t)) { (cand[ro] = cand[ro] || []).push(f); break; } } });
+  Object.entries(cand).forEach(([ro, l]) => { let best = null, bn = 0; l.forEach(f => { const n = pdfColumn(M, f, used).length; if (n > bn) { bn = n; best = f; } }); if (best) plan.cols[ro] = best; });
+  Object.entries(plan.cols).forEach(([ro, f]) => { if (!f) { delete plan.cols[ro]; return; } const s = pdfColumn(M, f, used); s.forEach(x => used.add(x.id)); plan.cols[ro] = s; plan.rows = Math.max(plan.rows, s.length); });
+  Object.keys(plan.fields).forEach(k => { if (!plan.fields[k]) delete plan.fields[k]; });
+  return plan;
+}
+// keep only letters the built-in PDF font can write
+function pdfSafe(font, s) { return [...String(s == null ? "" : s).replace(/[‘’]/g, "'").replace(/[“”]/g, '"')].map(ch => { try { font.encodeText(ch); font.widthOfTextAtSize(ch, 10); return ch; } catch (e) { return "?"; } }).join(""); }
+function fitText(font, s, maxW, size, minSize) { // shrink, then cut with …
+  let z = size; while (z > minSize && font.widthOfTextAtSize(s, z) > maxW) z -= 0.5;
+  if (font.widthOfTextAtSize(s, z) <= maxW) return [s, z];
+  let t = s; while (t.length > 1 && font.widthOfTextAtSize(t + "…", z) > maxW) t = t.slice(0, -1); return [t + "…", z];
+}
+const rowVal = (r, ro) => ro === "hours" ? String(r.hours) : String(r[ro] == null ? "" : r[ro]);
+async function pdfFill(M, plan, d) {
+  await pdfLibs();
+  const doc = await PDFLib.PDFDocument.load(M.u8, { ignoreEncryption: true, updateMetadata: false });
+  const font = await doc.embedFont(PDFLib.StandardFonts.Helvetica), bold = await doc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+  const S = s => pdfSafe(font, s); let fit = 0, missing = [];
+  if (plan.mode === "form") {
+    const form = doc.getForm();
+    const put = (f, v) => { try { const tf = form.getTextField(f.name); const ml = tf.getMaxLength(); v = S(v); if (ml && v.length > ml) v = v.slice(0, ml); tf.setText(v);
+      // long text (like "what was done"): make the letters smaller so it fits the box (not below 6 pt)
+      const da = /([\d.]+)\s+Tf/.exec(tf.acroField.getDefaultAppearance() || ""), z0 = da && Number(da[1]) || 10;
+      if (v && font.widthOfTextAtSize(v, z0) > f.w - 4) { let z = z0; while (z > 6 && font.widthOfTextAtSize(v, z) > f.w - 4) z -= 0.5; tf.setFontSize(z); } } catch (e) { console.warn(e); } };
+    CV_FIELDS.forEach(([k]) => { if (plan.fields[k]) put(plan.fields[k], cvVal(d, k)); else if (k !== "agency" || d.agency) missing.push(k); });
+    fit = plan.rows;
+    Object.entries(plan.cols).forEach(([ro, list]) => list.forEach((f, i) => put(f, d.rows[i] ? rowVal(d.rows[i], ro) : "")));
+    if (!Object.keys(plan.cols).length) fit = 0;
+    try { form.updateFieldAppearances(font); } catch (e) { console.warn(e); }
+  } else {
+    const W = PDFLib.rgb(1, 1, 1), K = PDFLib.rgb(0, 0, 0), pages = doc.getPages();
+    const box = (pg, x, yc, w, h) => pg.drawRectangle({ x, y: yc - h / 2, width: w, height: h, color: W });
+    CV_FIELDS.forEach(([k]) => { const sp = plan.spots[k]; if (!sp) { if (k !== "agency" || d.agency) missing.push(k); return; }
+      const pg = pages[sp.p] || pages[0], size = sp.size || 11, w = sp.w || 150;
+      const [t, z] = fitText(font, S(cvVal(d, k)), w - 2, size, 6);
+      if (plan.white) pg.drawRectangle({ x: sp.x, y: sp.y - z * 0.35 - 1.6, width: w, height: z * 1.35, color: W }); // stops just above a printed line under the space
+      pg.drawText(t, { x: sp.x + 1, y: sp.y - z * 0.35, size: z, font, color: K }); });
+    const R = plan.rows;
+    if (R && Object.keys(R.cols).length) {
+      const pg = pages[R.p] || pages[0], h = R.h || 18, size = Math.min(10, h * 0.62);
+      fit = R.n || Math.max(1, Math.floor((R.y1 - 24) / h) + 1);
+      for (let i = 0; i < fit; i++) { const yc = R.y1 - i * h, r = d.rows[i];
+        Object.entries(R.cols).forEach(([ro, c]) => { const w = c.w || 60;
+          if (plan.white && (r || R.n)) box(pg, c.x + 1.5, yc, w - 3, Math.max(4, Math.min(h - 6, size * 1.7))); // leaves the table's lines alone
+          if (r) { const [t, z] = fitText(font, S(rowVal(r, ro)), w - 2, size, Math.min(size, 6)); pg.drawText(t, { x: c.x + 1, y: yc - z * 0.35, size: z, font, color: K }); } }); }
+      // total hours under the last booking, if the sheet has no spot of its own for it and there is room
+      if (!plan.spots.total && R.cols.hours && d.rows.length < fit) { const yc = R.y1 - d.rows.length * h, c0 = Object.values(R.cols).sort((a, b) => a.x - b.x)[0];
+        const hc = R.cols.hours; pg.drawText("Total", { x: c0 === hc ? hc.x - 30 : c0.x + 1, y: yc - size * 0.35, size, font: bold }); pg.drawText(String(d.total), { x: hc.x + 1, y: yc - size * 0.35, size, font: bold }); missing = missing.filter(k => k !== "total"); }
+    }
+  }
+  // bookings that don't fit (or no table on the sheet): an extra page at the end
+  const extra = d.rows.slice(fit);
+  if (extra.length || missing.length) {
+    const p0 = doc.getPages()[0], [pw, ph] = [p0.getWidth(), p0.getHeight()];
+    const cols = [["date", "Date", 62], ["day", "Day", 32], ["start", "Start", 54], ["end", "End", 54], ["hours", "Hours", 38], ["done", "What was done", 0]];
+    const L = 40, Rt = pw - 40; cols[5][2] = Rt - L - cols.slice(0, 5).reduce((a, c) => a + c[2], 0);
+    let pg = null, y = 0;
+    const head = () => { pg = doc.addPage([pw, ph]); y = ph - 50;
+      pg.drawText(S(d.name + " - " + d.month + (fit ? " (continued)" : "")), { x: L, y, size: 13, font: bold }); y -= 18;
+      if (missing.length) { pg.drawText(S(missing.map(k => CV_FIELDS.find(f => f[0] === k)[1] + ": " + cvVal(d, k)).join("     ")), { x: L, y, size: 10, font }); y -= 18; missing = []; }
+      if (extra.length) { let x = L; cols.forEach(c => { pg.drawText(c[1], { x: x + 2, y, size: 9.5, font: bold }); x += c[2]; }); pg.drawLine({ start: { x: L, y: y - 4 }, end: { x: Rt, y: y - 4 }, thickness: 0.8 }); y -= 18; } };
+    head();
+    extra.forEach(r => { if (y < 50) head(); let x = L; cols.forEach(c => { const [t, z] = fitText(font, S(rowVal(r, c[0])), c[2] - 4, 9.5, 6); pg.drawText(t, { x: x + 2, y, size: z, font }); x += c[2]; }); pg.drawLine({ start: { x: L, y: y - 5 }, end: { x: Rt, y: y - 5 }, thickness: 0.3, color: PDFLib.rgb(0.6, 0.6, 0.6) }); y -= 17; });
+    if (extra.length) { if (y < 50) head(); pg.drawText("Total hours for " + S(d.month) + ": " + d.total, { x: L, y: y - 4, size: 10.5, font: bold }); }
+  }
+  return await doc.save();
+}
+// pictures of the pages (for the preview, the tap screen and printing)
+async function pdfPageImgs(u8, scale, only) {
+  await pdfLibs(); const pj = await pjsOpen(u8), out = [];
+  for (let i = 1; i <= pj.numPages && i <= 20; i++) { if (only != null && i - 1 !== only) continue;
+    const pg = await pj.getPage(i), vp = pg.getViewport({ scale: Math.min(scale, 2200 / pg.getViewport({ scale: 1 }).width) });
+    const cv = document.createElement("canvas"); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+    const cx = cv.getContext("2d"); cx.fillStyle = "#fff"; cx.fillRect(0, 0, cv.width, cv.height);
+    await pg.render({ canvasContext: cx, viewport: vp }).promise; out.push({ url: cv.toDataURL("image/jpeg", 0.9), vp, i: i - 1 }); cv.width = cv.height = 0; }
+  return out;
+}
+
+/* ---- "Check spots" for a PDF ---- */
+const TAP_ITEMS = [["name", "Client name"], ["medicaid", "Medicaid #"], ["month", "Month"], ["agency", "Agency"], ["total", "Total hours"],
+  ...PDF_ROLES.map(ro => ["r:" + ro, "Row 1: " + ROLE_LONG[ro]]), ["row2", "Row 2 (any column)"], ["last", "Last row (any column)"]];
+let tapSel = null, tapPage = 0, tapZoom = false;
+function pdfMapForm(M, mp) {
+  const plan = pdfFormPlan(M, mp), cut = t => t.length > 40 ? t.slice(0, 38) + "…" : t;
+  const fl = M.fields.slice().sort(sortTop), nm = f => cut(fNameClean(f.name) || f.name) + (/\d/.test(f.name) && fNameClean(f.name) ? " #" + f.name.match(/\d+/g).pop() : "") + (nearText(M, f) ? " (by “" + cut(nearText(M, f)) + "”)" : "") + (M.pages.length > 1 ? ", page " + (f.p + 1) : "");
+  const sel = (id, cur, opts) => '<select class="f sel" id="' + id + '"><option value="auto">Find it by itself</option><option value="none"' + (cur === "none" ? " selected" : "") + ">Leave it out</option>" + fl.map(f => '<option value="' + esc(f.id) + '"' + (cur === f.id ? " selected" : "") + ">Box: " + esc(nm(f)) + "</option>").join("") + "</select>";
+  return '<p class="sub">This PDF has <b>' + M.fields.length + " boxes to fill in</b>. Each thing below goes into the box shown. If one is wrong, pick the right box.</p>" +
+    CV_FIELDS.map(([k, l]) => '<div class="mrow"><label for="mp_' + k + '">' + l + '</label><div class="mfound">' + (plan.fields[k] ? "Box “" + esc(nm(plan.fields[k])) + "”" : '<span class="miss">No box found: written on an extra page at the end</span>') + "</div>" + sel("mp_" + k, (mp.fields || {})[k]) + "</div>").join("") +
+    '<h4 class="mh">Dates table (one line per visit)</h4><p class="sub">Pick the box in the FIRST line for each column; the boxes under it are used for the next visits' + (plan.rows ? " (" + plan.rows + " lines)" : "") + ".</p>" +
+    PDF_ROLES.map(ro => '<div class="mrow"><label for="mc_' + ro + '">' + ROLE_LONG[ro] + '</label><div class="mfound">' + (plan.cols[ro] ? "Box “" + esc(nm(plan.cols[ro][0])) + "” and " + (plan.cols[ro].length - 1) + " under it" : '<span class="sub">Not on this sheet</span>') + "</div>" + sel("mc_" + ro, (mp.cols || {})[ro]) + "</div>").join("") +
+    '<div class="mrow"><div class="mfound">' + (plan.rows ? "" : '<span class="miss">No dates boxes found: the visits go on an extra page at the end.</span> ') + '</div><button type="button" class="linkbtn" id="mpTapMode">The boxes don\'t work? Place the spots by tapping on the page instead</button></div>' +
+    '<div id="mpImgs" class="pdfprev"></div>';
+}
+function pdfMapTap(M, mp) {
+  const plan = pdfPlan(M, Object.assign({}, mp, { mode: "tap" })); mapCtx.tplan = plan;
+  const done = k => k.startsWith("r:") ? plan.rows && plan.rows.cols[k.slice(2)] : k === "row2" ? plan.rows && plan.rows.h2 : k === "last" ? plan.rows && plan.rows.n : plan.spots[k];
+  return '<p class="sub"><b>1.</b> Tap a button. <b>2.</b> Tap the sheet where it goes (the left edge of the space). Tap <b>Row 1</b> for each column the sheet has (Date, Start, End, Hours, What was done…), then <b>Row 2</b> once so it knows the line height. Dashed boxes show where the later lines go.</p>' +
+    (plan.guessed ? '<p class="miss" style="margin:0 0 6px">Some spots were guessed from the words on the sheet: check them on the picture.</p>' : "") +
+    (plan.rows && !plan.rows.n ? '<p class="miss" style="margin:0 0 6px">Tap “Last row” too, so it knows where the table ends.</p>' : "") +
+    '<div class="tapchips">' + TAP_ITEMS.map(([k, l]) => '<button type="button" class="chip' + (tapSel === k ? " on" : "") + (done(k) ? " done" : "") + '" data-tap="' + k + '">' + (done(k) ? "✓ " : "") + esc(l) + "</button>").join("") + "</div>" +
+    '<div class="tapbar">' + (M.pages.length > 1 ? '<button type="button" class="btn" id="tpPrev">‹</button><span>Page ' + (tapPage + 1) + " of " + M.pages.length + '</span><button type="button" class="btn" id="tpNext">›</button>' : "") +
+    '<button type="button" class="btn" id="tpZoom">' + (tapZoom ? "Smaller page" : "Bigger page") + "</button>" +
+    (tapSel && done(tapSel) && tapSel !== "last" && tapSel !== "row2" ? '<button type="button" class="btn" id="tpNar">Narrower</button><button type="button" class="btn" id="tpWid">Wider</button>' : "") +
+    (tapSel && done(tapSel) ? '<button type="button" class="btn danger" id="tpDel">Remove</button>' : "") + "</div>" +
+    '<label class="tapwhite"><input type="checkbox" id="tpWhite"' + (plan.white ? " checked" : "") + "> Cover last month's writing with white first</label>" +
+    '<div class="tapwrap' + (tapZoom ? " zoom" : "") + '"><div class="tappage" id="tapPage"><div class="sub" style="padding:20px">Loading the page…</div></div></div>' +
+    (M.fields.length ? '<button type="button" class="linkbtn" id="mpFormMode">Use the PDF\'s own boxes instead</button>' : "");
+}
+async function drawTapPage() {
+  const { M } = mapCtx, plan = mapCtx.tplan, box = $("tapPage"); if (!box) return;
+  mapCtx.imgs = mapCtx.imgs || {}; if (!mapCtx.imgs[tapPage]) mapCtx.imgs[tapPage] = (await pdfPageImgs(M.u8, 2, tapPage))[0];
+  const im = mapCtx.imgs[tapPage]; if (!$("tapPage")) return;
+  const vp = im.vp, sx = 1 / vp.width * 100, sy = 1 / vp.height * 100; // % of the picture
+  const mk = (x, yc, w, h, cls, label) => { const [ax, ay] = vp.convertToViewportPoint(x, yc + h / 2), [bx, by] = vp.convertToViewportPoint(x + w, yc - h / 2);
+    return '<div class="tapmk ' + cls + '" style="left:' + Math.min(ax, bx) * sx + "%;top:" + Math.min(ay, by) * sy + "%;width:" + Math.abs(bx - ax) * sx + "%;height:" + Math.abs(by - ay) * sy + '%">' + (label ? "<span>" + esc(label) + "</span>" : "") + "</div>"; };
+  let h = '<img src="' + im.url + '" alt="Page ' + (tapPage + 1) + '" draggable="false">';
+  CV_FIELDS.forEach(([k, l]) => { const s = plan.spots[k]; if (s && s.p === tapPage) h += mk(s.x, s.y, s.w || 150, (s.size || 11) * 1.5, tapSel === k ? "sel" : "", l); });
+  const R = plan.rows; if (R && R.p === tapPage) { const n = R.n || Math.max(1, Math.floor((R.y1 - 24) / (R.h || 18)) + 1);
+    Object.entries(R.cols).forEach(([ro, c]) => { for (let i = 0; i < Math.min(n, 40); i++) h += mk(c.x, R.y1 - i * (R.h || 18), c.w || 60, Math.max(4, (R.h || 18) - 3), i ? "later" : tapSel === "r:" + ro ? "sel" : "", i ? "" : ROLE_LONG[ro]); }); }
+  box.innerHTML = h;
+}
+function tapAt(ev) {
+  const img = $("tapPage").querySelector("img"); if (!img || !tapSel) { if (!tapSel) toast("First tap a button above (like Client name)"); return; }
+  const im = mapCtx.imgs[tapPage], rc = img.getBoundingClientRect(); const vx = (ev.clientX - rc.left) / rc.width * im.vp.width, vy = (ev.clientY - rc.top) / rc.height * im.vp.height;
+  const [x, y] = im.vp.convertToPdfPoint(vx, vy), plan = mapCtx.tplan, pw = mapCtx.M.pages[tapPage].w;
+  if (CV_FIELDS.some(f => f[0] === tapSel)) { const old = plan.spots[tapSel]; plan.spots[tapSel] = { p: tapPage, x, y, w: old && old.w || Math.min(tapSel === "total" ? 40 : 150, pw - x - 10) }; }
+  else { const R = plan.rows = plan.rows && plan.rows.p === tapPage ? plan.rows : { p: tapPage, cols: {}, h: 18 }; delete R.guessed;
+    if (tapSel.startsWith("r:")) { const ro = tapSel.slice(2); R.y1 = y; R.cols[ro] = { x }; Object.values(R.cols).forEach(c => { if (!c.wHand) delete c.w; }); pdfWidths(mapCtx.M, plan); }
+    else if (R.y1 == null) return toast("Tap Row 1 first");
+    else if (tapSel === "row2") { if (R.y1 - y < 5) return toast("Row 2 must be below row 1"); R.h = R.y1 - y; R.h2 = true; }
+    else if (tapSel === "last") { if (R.y1 - y < 0) return toast("The last row must be below row 1"); R.n = Math.round((R.y1 - y) / (R.h || 18)) + 1; } }
+  plan.guessed = false; saveTapToMap(); const nx = TAP_ITEMS.findIndex(t => t[0] === tapSel); renderMap(); drawTapPage();
+}
+function saveTapToMap() { const p = mapCtx.tplan, m = mapCtx.s.mapping = mapCtx.s.mapping || {}; m.mode = "tap"; m.spots = p.spots; m.rows = p.rows; m.white = p.white; }
+function tapAdjust(f) { const p = mapCtx.tplan, k = tapSel; if (!k) return;
+  if (k.startsWith("r:")) { const c = p.rows && p.rows.cols[k.slice(2)]; if (c) { c.w = Math.max(10, (c.w || 60) * f); c.wHand = true; } }
+  else if (p.spots[k]) p.spots[k].w = Math.max(15, (p.spots[k].w || 150) * f);
+  saveTapToMap(); renderMap(); drawTapPage(); }
+function tapRemove() { const p = mapCtx.tplan, k = tapSel; if (!k) return;
+  if (k.startsWith("r:")) { if (p.rows) { delete p.rows.cols[k.slice(2)]; if (!Object.keys(p.rows.cols).length) p.rows = null; } }
+  else if (k === "row2") { if (p.rows) { p.rows.h = 18; delete p.rows.h2; } } else if (k === "last") { if (p.rows) delete p.rows.n; } else delete p.spots[k];
+  saveTapToMap(); renderMap(); drawTapPage(); }
+function wirePdfMap() {
+  const b = $("mapBody");
+  b.querySelectorAll("select").forEach(sel => sel.onchange = () => { const m = mapCtx.s.mapping = mapCtx.s.mapping || {}; if (sel.id.startsWith("mc_")) (m.cols = m.cols || {})[sel.id.slice(3)] = sel.value; else (m.fields = m.fields || {})[sel.id.slice(3)] = sel.value; renderMap(); });
+  if ($("mpTapMode")) $("mpTapMode").onclick = () => { mapCtx.s.mapping = Object.assign(mapCtx.s.mapping || {}, { mode: "tap" }); tapSel = "name"; renderMap(); };
+  if ($("mpFormMode")) $("mpFormMode").onclick = () => { mapCtx.s.mapping.mode = "form"; renderMap(); };
+  b.querySelectorAll("[data-tap]").forEach(x => x.onclick = () => { tapSel = x.dataset.tap; const s = mapCtx.tplan.spots[tapSel]; if (s && s.p !== tapPage) tapPage = s.p; else if (tapSel.startsWith("r:") && mapCtx.tplan.rows && mapCtx.tplan.rows.p !== tapPage) tapPage = mapCtx.tplan.rows.p; renderMap(); });
+  if ($("tpPrev")) $("tpPrev").onclick = () => { tapPage = Math.max(0, tapPage - 1); renderMap(); };
+  if ($("tpNext")) $("tpNext").onclick = () => { tapPage = Math.min(mapCtx.M.pages.length - 1, tapPage + 1); renderMap(); };
+  if ($("tpZoom")) $("tpZoom").onclick = () => { tapZoom = !tapZoom; renderMap(); };
+  if ($("tpNar")) $("tpNar").onclick = () => tapAdjust(0.8);
+  if ($("tpWid")) $("tpWid").onclick = () => tapAdjust(1.25);
+  if ($("tpDel")) $("tpDel").onclick = tapRemove;
+  if ($("tpWhite")) $("tpWhite").onchange = () => { mapCtx.tplan.white = $("tpWhite").checked; saveTapToMap(); };
+  if ($("tapPage")) { $("tapPage").onclick = tapAt; drawTapPage().catch(e => { $("mapErr").textContent = "Could not show the page: " + (e.message || e); }); }
+  if ($("mpImgs")) pdfFormPics();
+}
+async function pdfFormPics() { // fillable PDF: show where each value goes, as coloured boxes on the pages
+  const { M } = mapCtx, plan = pdfFormPlan(M, mapCtx.s.mapping || {}), box = $("mpImgs");
+  const marks = []; Object.entries(plan.fields).forEach(([k, f]) => marks.push([f, CV_FIELDS.find(x => x[0] === k)[1], ""])); Object.entries(plan.cols).forEach(([ro, l]) => l.forEach((f, i) => marks.push([f, i ? "" : ROLE_LONG[ro], i ? "later" : ""])));
+  mapCtx.imgs = mapCtx.imgs || {}; let h = "";
+  for (let p = 0; p < M.pages.length; p++) { if (!marks.some(m => m[0].p === p) && p > 0) continue;
+    if (!mapCtx.imgs[p]) mapCtx.imgs[p] = (await pdfPageImgs(M.u8, 1.5, p))[0]; const im = mapCtx.imgs[p], vp = im.vp;
+    h += '<div class="tappage">' + '<img src="' + im.url + '" alt="">' + marks.filter(m => m[0].p === p).map(([f, l, c]) => { const [ax, ay] = vp.convertToViewportPoint(f.x, f.y + f.h), [bx, by] = vp.convertToViewportPoint(f.x + f.w, f.y);
+      return '<div class="tapmk ' + c + '" style="left:' + Math.min(ax, bx) / vp.width * 100 + "%;top:" + Math.min(ay, by) / vp.height * 100 + "%;width:" + Math.abs(bx - ax) / vp.width * 100 + "%;height:" + Math.abs(by - ay) / vp.height * 100 + '%">' + (l ? "<span>" + esc(l) + "</span>" : "") + "</div>"; }).join("") + "</div>"; }
+  if (box.isConnected) box.innerHTML = h;
+}
+
 /* ---- the plain sheet used when an agency has no sheet uploaded (a small Word file made here) ---- */
 async function defaultDocx() {
   const z = new JSZip();
@@ -1639,8 +1952,10 @@ const sheetCache = {};
 async function getSheet(ak) { const m = sheetsMeta[ak]; if (!m) return null; const c = sheetCache[ak]; if (c && c.updated_at === m.updated_at) return c;
   const r = await api("sheets/" + encodeURIComponent(ak)); if (r.status !== 200) throw new Error("Could not load the sheet."); const s = r.data.sheet; s.u8 = b64.dec(s.data); delete s.data; s.mapping = s.mapping ? JSON.parse(s.mapping) : {}; sheetCache[ak] = s; return s; }
 const libsReady = () => loadLib("jszip", () => window.JSZip);
-async function modelOf(kind, u8) { await libsReady(); return kind === "xlsx" ? xlsxModel(u8) : docxModel(u8); }
-const planOf = (M, mp) => M.kind === "xlsx" ? xlsxPlan(M, mp) : docxPlan(M, mp);
+async function modelOf(kind, u8) { if (kind === "pdf") return pdfModel(u8); await libsReady(); return kind === "xlsx" ? xlsxModel(u8) : docxModel(u8); }
+const planOf = (M, mp) => M.kind === "pdf" ? pdfPlan(M, mp) : M.kind === "xlsx" ? xlsxPlan(M, mp) : docxPlan(M, mp);
+const kindName = k => k === "pdf" ? "PDF" : k === "xlsx" ? "Excel" : "Word";
+const ownKey = ck => "client:" + ck;
 
 /* ---- Agency cover sheets dialog (Clients tab) ---- */
 async function openSheets() {
@@ -1650,30 +1965,38 @@ async function openSheets() {
 function renderSheets() {
   const ags = agencies();
   $("shList").innerHTML = ags.map(a => { const s = sheetsMeta[nkey(a)];
-    return '<li class="shrow"><div><div class="nm">' + esc(a) + '</div><div class="meta">' + (s ? esc(s.filename) + " · " + (s.kind === "xlsx" ? "Excel" : "Word") + " · " + Math.max(1, Math.round(s.size / 1024)) + " KB" : "No sheet yet (a plain cover sheet is used)") + "</div></div>" +
+    return '<li class="shrow"><div><div class="nm">' + esc(a) + '</div><div class="meta">' + (s ? esc(s.filename) + " · " + kindName(s.kind) + " · " + Math.max(1, Math.round(s.size / 1024)) + " KB" : "No sheet yet (a plain cover sheet is used, unless the client has his own)") + "</div></div>" +
       '<div class="shbtns"><button class="btn" data-up="' + esc(a) + '">' + (s ? "Replace" : "Upload") + "</button>" + (s ? '<button class="btn" data-map="' + esc(a) + '">Check spots</button><button class="btn danger" data-rm="' + esc(a) + '" aria-label="Remove">Remove</button>' : "") + "</div></li>"; }).join("");
 }
-let shFor = null;
+let shFor = null; // { key, label, own, err: id of the message line }
+// Round 13: PDF or Word (.docx) only; a photo (jpg/png) of the paper sheet is turned into a PDF
 async function sheetUpload(file) {
-  const a = shFor; if (!a || !file) return;
-  const kind = /\.xlsx$/i.test(file.name) ? "xlsx" : /\.docx$/i.test(file.name) ? "docx" : "";
-  if (!kind) return ($("shErr").textContent = /\.(doc|xls)$/i.test(file.name) ? "This is an old Word/Excel file (.doc / .xls). Open it and \"Save as\" .docx or .xlsx, then upload that." : "Please pick a Word (.docx) or Excel (.xlsx) file.");
-  if (file.size > 3 * 1024 * 1024) return ($("shErr").textContent = "This file is bigger than 3 MB. Please use a smaller copy.");
-  $("shErr").textContent = "Reading " + file.name + "…";
-  const u8 = new Uint8Array(await file.arrayBuffer());
-  try { const M = await modelOf(kind, u8); planOf(M, {}); } catch (e) { return ($("shErr").textContent = "Could not read this file: " + (e.message || e)); }
-  const r = await api("sheets/" + encodeURIComponent(nkey(a)), { method: "PUT", body: JSON.stringify({ agency: a, filename: file.name, kind, data: b64.enc(u8), mapping: {} }) });
-  if (r.status !== 200) return ($("shErr").textContent = (r.data && r.data.error) || "Could not save. Try again.");
-  $("shErr").textContent = ""; toast("Saved " + a + "'s sheet"); await loadSheets(); renderSheets(); openMap(a);
+  const t = shFor; if (!t || !file) return; const msg = m => { $(t.err).textContent = m; };
+  let kind = /\.pdf$/i.test(file.name) || file.type === "application/pdf" ? "pdf" : /\.docx$/i.test(file.name) ? "docx" : /\.(jpe?g|png)$/i.test(file.name) || /^image\/(jpeg|png)$/.test(file.type) ? "img" : "";
+  if (!kind) return msg(/\.(xlsx|xls|xlsm|csv|ods)$/i.test(file.name) ? "Excel files aren't used for cover sheets. Please upload the sheet as a PDF or a Word (.docx) file." : /\.doc$/i.test(file.name) ? "This is an old Word file (.doc). Open it and \"Save as\" .docx (or PDF), then upload that." : "Please pick a PDF or a Word (.docx) file.");
+  if (file.size > 6 * 1024 * 1024) return msg("This file is bigger than 6 MB. Please use a smaller copy.");
+  msg("Reading " + file.name + "…");
+  let u8 = new Uint8Array(await file.arrayBuffer()), name = file.name;
+  try {
+    if (kind === "img") { u8 = await imageToPdf(u8, /png/i.test(file.type || file.name)); kind = "pdf"; name = name.replace(/\.[a-z]+$/i, "") + ".pdf"; }
+    const M = await modelOf(kind, u8); planOf(M, {});
+  } catch (e) { return msg("Could not read this file: " + (e.message || e)); }
+  if (u8.length > 6 * 1024 * 1024) return msg("This file is bigger than 6 MB. Please use a smaller copy.");
+  const r = await api("sheets/" + encodeURIComponent(t.key), { method: "PUT", body: JSON.stringify({ agency: t.label, filename: name, kind, data: b64.enc(u8), mapping: {} }) });
+  if (r.status !== 200) return msg((r.data && r.data.error) || "Could not save. Try again.");
+  msg(""); toast("Saved"); await loadSheets(); if ($("sheetsDlg").open) renderSheets(); renderCliSheet(); tapSel = "name"; tapPage = 0; openMap(t.key, t.label);
 }
 /* ---- "Check spots": what goes where, change by hand ---- */
 let mapCtx = null;
-async function openMap(a) {
-  const ak = nkey(a); $("mapTitle").textContent = a + ": where things go"; $("mapBody").innerHTML = '<p class="sub">Reading the sheet…</p>'; $("mapErr").textContent = ""; if (!$("mapDlg").open) $("mapDlg").showModal();
-  try { const s = await getSheet(ak); const M = await modelOf(s.kind, s.u8.slice()); mapCtx = { a, ak, s, M }; renderMap(); } catch (e) { $("mapBody").innerHTML = ""; $("mapErr").textContent = "Could not read the sheet: " + (e.message || e); }
+async function openMap(ak, a) {
+  $("mapTitle").textContent = a + ": where things go"; $("mapBody").innerHTML = '<p class="sub">Reading the sheet…</p>'; $("mapErr").textContent = ""; if (!$("mapDlg").open) $("mapDlg").showModal();
+  try { const s0 = await getSheet(ak); const s = { ...s0, mapping: JSON.parse(JSON.stringify(s0.mapping || {})) }; // a copy: Cancel leaves the saved one alone
+    const M = await modelOf(s.kind, s.u8.slice()); mapCtx = { a, ak, s, M }; renderMap(); } catch (e) { $("mapBody").innerHTML = ""; $("mapErr").textContent = "Could not read the sheet: " + (e.message || e); }
 }
 function renderMap() {
-  const { s, M } = mapCtx, mp = s.mapping || {}, plan = planOf(M, mp);
+  const { s, M } = mapCtx, mp = s.mapping || {};
+  if (M.kind === "pdf") { $("mapBody").innerHTML = M.fields.length && mp.mode !== "tap" ? pdfMapForm(M, mp) : pdfMapTap(M, mp); wirePdfMap(); return; }
+  const plan = planOf(M, mp);
   const cut = t => t.length > 60 ? t.slice(0, 58) + "…" : t;
   const spotName = sp => (M.kind === "xlsx" ? sp.id + ": " : "") + cut(sp.text);
   const descr = (k) => { const x = (plan.fields[k] || [])[0]; if (!x && k === "total" && plan.table && Object.values(plan.table.cols).includes("hours")) return "In the dates table (its Total row, or a new one)";
@@ -1685,13 +2008,18 @@ function renderMap() {
   $("mapBody").innerHTML = '<p class="sub">From <b>' + esc(s.filename) + "</b>. If a spot is wrong, pick the label it should go next to.</p>" +
     CV_FIELDS.map(([k, l]) => '<div class="mrow"><label for="mp_' + k + '">' + l + '</label><div class="mfound">' + descr(k) + '</div><select class="f sel" id="mp_' + k + '">' + opts(k) + "</select></div>").join("") +
     '<div class="mrow"><label for="mp_table">Dates table</label><div class="mfound">' + tdesc + '</div><select class="f sel" id="mp_table"><option value="auto">Find it by itself</option><option value="none"' + (mp.table === "none" ? " selected" : "") + ">Add a new table at the end</option>" +
-    M.rows.map(r => '<option value="' + esc(r.id) + '"' + (mp.table === r.id ? " selected" : "") + ">Header row: " + esc(cut(r.text)) + "</option>").join("") + "</select></div>";
-  $("mapBody").querySelectorAll("select").forEach(sel => sel.onchange = () => { const m = mapCtx.s.mapping = mapCtx.s.mapping || {}; m.fields = m.fields || {}; if (sel.id === "mp_table") m.table = sel.value; else m.fields[sel.id.slice(3)] = sel.value; renderMap(); });
+    M.rows.map(r => '<option value="' + esc(r.id) + '"' + (mp.table === r.id ? " selected" : "") + ">Header row: " + esc(cut(r.text)) + "</option>").join("") + "</select></div>" +
+    (M.kind === "docx" && plan.table && !plan.table.tmpl ? (() => { const hs = kids(plan.table.tr, "tc").map(cellText), cur = mp.cols || {}; // Round 13: which column gets what
+      return '<p class="sub" style="margin-top:8px">Columns of the dates table (one line per visit):</p>' + ROW_KEYS.map(ro => { const at = Object.entries(plan.table.cols).find(e => e[1] === ro);
+        return '<div class="mrow"><label for="mc_' + ro + '">' + ROLE_LONG[ro] + '</label><div class="mfound">' + (at ? "Column " + (Number(at[0]) + 1) + (hs[at[0]] ? ": “" + esc(cut(hs[at[0]])) + "”" : "") : '<span class="sub">Not on this sheet</span>') + '</div><select class="f sel" id="mc_' + ro + '"><option value="auto">Find it by itself</option><option value="none"' + (cur[ro] === "none" ? " selected" : "") + ">Not on this sheet</option>" +
+          hs.map((h, i) => '<option value="' + i + '"' + (String(cur[ro]) === String(i) ? " selected" : "") + ">Column " + (i + 1) + (h ? ": " + esc(cut(h)) : "") + "</option>").join("") + "</select></div>"; }).join(""); })() : "");
+  $("mapBody").querySelectorAll("select").forEach(sel => sel.onchange = () => { const m = mapCtx.s.mapping = mapCtx.s.mapping || {}; m.fields = m.fields || {}; if (sel.id === "mp_table") { m.table = sel.value; delete m.cols; } else if (sel.id.startsWith("mc_")) (m.cols = m.cols || {})[sel.id.slice(3)] = sel.value; else m.fields[sel.id.slice(3)] = sel.value; renderMap(); });
 }
 async function saveMap() {
   const { ak, s } = mapCtx; const r = await api("sheets/" + encodeURIComponent(ak), { method: "PUT", body: JSON.stringify({ mapping: s.mapping || {} }) });
   if (r.status !== 200) return ($("mapErr").textContent = "Could not save. Try again.");
-  await loadSheets(); s.updated_at = sheetsMeta[ak] && sheetsMeta[ak].updated_at; sheetCache[ak] = s; $("mapDlg").close(); toast("Saved"); if ($("sheetsDlg").open) renderSheets();
+  await loadSheets(); s.updated_at = sheetsMeta[ak] && sheetsMeta[ak].updated_at; sheetCache[ak] = s; $("mapDlg").close(); toast("Saved"); if ($("sheetsDlg").open) renderSheets(); renderCliSheet();
+  if (cov && $("coverDlg").open) buildCover();
 }
 
 /* ---- Billing cover sheet for one client + month ---- */
@@ -1707,27 +2035,32 @@ async function buildCover() {
   try {
     await Promise.all([loadSheets(), libsReady()]);
     const d = await coverData(ck, y, m); const ak = c.agency ? nkey(c.agency) : "";
-    const s = ak && sheetsMeta[ak] ? await getSheet(ak) : null;
+    const own = sheetsMeta[ownKey(ck)] ? ownKey(ck) : null, useK = own || (ak && sheetsMeta[ak] ? ak : null);
+    const s = useK ? await getSheet(useK) : null;
     const kind = s ? s.kind : "docx", u8 = s ? s.u8.slice() : await defaultDocx();
     const M = await modelOf(kind, u8), plan = planOf(M, s ? s.mapping : {});
-    const out = kind === "xlsx" ? await xlsxFill(M, plan, d) : await docxFill(M, plan, d);
-    cov.out = out; cov.kind = kind; cov.d = d;
+    const out = kind === "pdf" ? await pdfFill(M, plan, d) : kind === "xlsx" ? await xlsxFill(M, plan, d) : await docxFill(M, plan, d);
+    cov.out = out; cov.kind = kind; cov.d = d; cov.sheetKey = useK; cov.sheetLabel = own ? c.name : c.agency;
+    const notOn = kind === "pdf" ? (plan.mode === "form" ? CV_FIELDS.filter(([k]) => !plan.fields[k] && (k !== "agency" || d.agency)) : CV_FIELDS.filter(([k]) => !plan.spots[k] && (k !== "agency" || d.agency) && !(k === "total" && plan.rows && plan.rows.cols.hours))) : [];
+    const noRows = kind === "pdf" && (plan.mode === "form" ? !Object.keys(plan.cols).length : !(plan.rows && Object.keys(plan.rows.cols).length));
     cov.file = (d.name + " - " + (d.agency || "cover sheet") + " - " + d.month).replace(/[\\/:*?"<>|,]+/g, " ").replace(/\s+/g, " ").trim() + "." + kind;
     $("covInfo").innerHTML = '<div class="covgrid"><span>Agency</span><b>' + esc(d.agency || "No agency") + '</b><span>Medicaid #</span><b>' + (d.medicaid ? esc(d.medicaid) : '<span class="miss">not filled in</span>') + "</b><span>Bookings</span><b>" + d.rows.length + "</b><span>Total hours</span><b>" + fmtH(d.total) + "</b></div>" +
-      '<p class="sub">' + (s ? "Filled into " + esc(d.agency) + "'s sheet: " + esc(s.filename) : d.agency ? "No sheet uploaded for " + esc(d.agency) + " yet, so this is the plain cover sheet. Upload theirs under Clients → Agency cover sheets." : "This client has no agency, so this is the plain cover sheet.") + "</p>" +
+      '<p class="sub">' + (own ? "Filled into this client's own sheet: " + esc(s.filename) : s ? "Filled into " + esc(d.agency) + "'s sheet: " + esc(s.filename) : "This is the plain cover sheet. To use the real one, open the client and tap “Upload last month's sheet”.") + "</p>" +
+      (notOn.length || noRows ? '<p class="miss" style="margin:4px 0 0">' + (notOn.length ? "No spot on the sheet for: " + notOn.map(f => f[1]).join(", ") + " (put on an extra page). " : "") + (noRows ? "No dates table marked: the visits are on an extra page. " : "") + "Tap “Fix where things go”.</p>" : "") +
       (!d.medicaid ? '<p class="miss" style="margin:4px 0 0">Add the Medicaid # in the client’s details.</p>' : "");
-    $("covDl").textContent = "Download " + (kind === "xlsx" ? "Excel" : "Word") + " file";
+    $("covDl").textContent = "Download " + kindName(kind) + (kind === "pdf" ? "" : " file"); $("covFix").hidden = !s;
     await renderCoverPreview($("covPrev"));
   } catch (e) { $("covInfo").innerHTML = ""; $("covErr").textContent = "Could not make the cover sheet: " + (e.message || e); console.error(e); }
 }
 async function renderCoverPreview(box) {
   box.innerHTML = "";
+  if (cov.kind === "pdf") { const ims = await pdfPageImgs(cov.out, box.id === "covPrev" ? 1.5 : 2.5); box.innerHTML = ims.map(im => '<img class="pdfpg" src="' + im.url + '" alt="Page ' + (im.i + 1) + '">').join(""); return; }
   if (cov.kind === "docx") { await loadLib("docxprev", () => window.docx && window.docx.renderAsync); await window.docx.renderAsync(new Blob([cov.out]), box, null, { inWrapper: false, ignoreWidth: false, breakPages: true, experimental: true });
     if (box.id === "covPrev") { const secs = [...box.querySelectorAll("section.docx")]; const w = secs[0] && secs[0].offsetWidth; if (w) { const z = Math.min(1, (box.clientWidth - 14) / w); secs.forEach(x => x.style.zoom = z); } } }
   else { await loadLib("xlsx", () => window.XLSX); const wb = XLSX.read(cov.out, { type: "array" }); box.innerHTML = '<div class="xprev">' + XLSX.utils.sheet_to_html(wb.Sheets[wb.SheetNames[0]], { header: "", footer: "" }) + "</div>"; }
 }
 function covDownload() {
-  const blob = new Blob([cov.out], { type: cov.kind === "xlsx" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+  const blob = new Blob([cov.out], { type: cov.kind === "pdf" ? "application/pdf" : cov.kind === "xlsx" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = cov.file; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
 }
 async function covPrint() {
@@ -1740,8 +2073,8 @@ $("sheetsBtn").onclick = openSheets;
 $("shClose").onclick = () => $("sheetsDlg").close();
 $("shList").addEventListener("click", async e => {
   const b = e.target.closest("button"); if (!b) return;
-  if (b.dataset.up) { shFor = b.dataset.up; $("sheetFile").value = ""; $("sheetFile").click(); }
-  if (b.dataset.map) openMap(b.dataset.map);
+  if (b.dataset.up) { shFor = { key: nkey(b.dataset.up), label: b.dataset.up, err: "shErr" }; $("sheetFile").value = ""; $("sheetFile").click(); }
+  if (b.dataset.map) openMap(nkey(b.dataset.map), b.dataset.map);
   if (b.dataset.rm && confirm("Remove " + b.dataset.rm + "'s cover sheet? (A plain cover sheet is used until you upload a new one.)")) { await api("sheets/" + encodeURIComponent(nkey(b.dataset.rm)), { method: "DELETE" }); await loadSheets(); renderSheets(); toast("Removed"); }
 });
 $("sheetFile").addEventListener("change", () => sheetUpload($("sheetFile").files[0]));
@@ -1752,6 +2085,20 @@ $("covPrevM").onclick = () => { const d = new Date(cov.y, cov.m - 1, 1); cov.y =
 $("covNextM").onclick = () => { const d = new Date(cov.y, cov.m + 1, 1); cov.y = d.getFullYear(); cov.m = d.getMonth(); buildCover(); };
 $("covDl").onclick = () => cov && cov.out && covDownload();
 $("covPrint").onclick = () => cov && cov.out && covPrint();
+$("covFix").onclick = () => { if (cov && cov.sheetKey) openMap(cov.sheetKey, cov.sheetLabel || ""); };
+/* ---- Round 13: the cover sheet on each client's own page (Change client dialog) ---- */
+async function renderCliSheet() {
+  const box = $("cSheetBox"); if (!box || !$("cliDlg").open) return; box.hidden = false;
+  if (!editingCli) { box.hidden = false; $("cSheetInfo").textContent = "Save the client first; then open him again to upload his sheet."; $("cSheetUp").hidden = $("cSheetMap").hidden = $("cSheetRm").hidden = true; return; }
+  const ck = editingCli.name_key, own = sheetsMeta[ownKey(ck)], ag = editingCli.agency && sheetsMeta[nkey(editingCli.agency)];
+  $("cSheetUp").hidden = false; $("cSheetUp").textContent = own ? "Upload a new sheet (PDF or Word)" : "Upload last month's sheet (PDF or Word)";
+  $("cSheetInfo").innerHTML = own ? "His own sheet: <b>" + esc(own.filename) + "</b> (" + kindName(own.kind) + ")" : ag ? "Uses " + esc(editingCli.agency) + "'s sheet: " + esc(ag.filename) + ". Upload his own to use that instead." : "No sheet yet: the plain cover sheet is used.";
+  $("cSheetMap").hidden = $("cSheetRm").hidden = !own;
+}
+$("cSheetUp").onclick = () => { if (!editingCli) return; shFor = { key: ownKey(editingCli.name_key), label: editingCli.name, own: true, err: "cSheetErr" }; $("sheetFile").value = ""; $("sheetFile").click(); };
+$("cSheetMap").onclick = () => { if (editingCli) openMap(ownKey(editingCli.name_key), editingCli.name); };
+$("cSheetRm").onclick = async () => { if (!editingCli || !confirm("Remove " + editingCli.name + "'s own sheet?")) return; await api("sheets/" + encodeURIComponent(ownKey(editingCli.name_key)), { method: "DELETE" }); await loadSheets(); renderCliSheet(); toast("Removed"); };
+const _openCli = openCli; openCli = function (c) { _openCli(c); $("cSheetErr").textContent = ""; $("cSheetInfo").textContent = c ? "Loading…" : ""; renderCliSheet(); if (c) loadSheets().then(renderCliSheet); };
 $("cCover").onclick = () => { if (!editingCli) return; const ck = editingCli.name_key; $("cliDlg").close(); const t = new Date(); openCover(ck, t.getFullYear(), t.getMonth()); };
 $("rep").addEventListener("click", e => { const b = e.target.closest("[data-cover]"); if (b) openCover(b.dataset.cover, tView.getFullYear(), tView.getMonth()); });
 </script>
