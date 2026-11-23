@@ -1777,10 +1777,14 @@ async function pdfFill(M, plan, d) {
   const S = s => pdfSafe(font, s); let fit = 0, missing = [];
   if (plan.mode === "form") {
     const form = doc.getForm();
-    const put = (f, v) => { try { const tf = form.getTextField(f.name); const ml = tf.getMaxLength(); v = S(v); if (ml && v.length > ml) v = v.slice(0, ml); tf.setText(v);
-      // long text (like "what was done"): make the letters smaller so it fits the box (not below 6 pt)
-      const da = /([\d.]+)\s+Tf/.exec(tf.acroField.getDefaultAppearance() || ""), z0 = da && Number(da[1]) || 10;
-      if (v && font.widthOfTextAtSize(v, z0) > f.w - 4) { let z = z0; while (z > 6 && font.widthOfTextAtSize(v, z) > f.w - 4) z -= 0.5; tf.setFontSize(z); } } catch (e) { console.warn(e); } };
+    const fmtJS = f => { try { const aa = form.getTextField(f.name).acroField.getWidgets()[0].dict.lookup(PDFLib.PDFName.of("AA")) || form.getTextField(f.name).acroField.dict.lookup(PDFLib.PDFName.of("AA")); const F = aa && aa.lookup(PDFLib.PDFName.of("F")); const js = F && F.lookup(PDFLib.PDFName.of("JS")); return js ? (js.decodeText ? js.decodeText() : String(js)) : ""; } catch (e) { return ""; } };
+    const money = []; // boxes the PDF shows as "$ 0.00": the "$" is drawn on our picture of them too (the value stays a plain number)
+    const put = (f, v) => { try { const tf = form.getTextField(f.name); const ml = tf.getMaxLength(); v = S(v); if (ml && v.length > ml) v = v.slice(0, ml);
+      const js = fmtJS(f); if (/AFDate_Format(Ex)?\("m\/d\//.test(js)) v = v.replace(/^0(\d)\//, "$1/").replace(/\/0(\d)\//, "/$1/");
+      tf.setText(v); if (v && /AFNumber_Format\([^)]*\\u0024|AFNumber_Format\([^)]*\$/.test(js)) money.push([tf, v]);
+      // letter size: the sheet's own, or (when it says "auto") 10 pt; smaller when the words are too long for the box (not below 6 pt)
+      const da = /([\d.]+)\s+Tf/.exec(tf.acroField.getDefaultAppearance() || ""), z0 = da && Number(da[1]) || Math.min(10, Math.max(6, f.h - 5));
+      let z = z0; while (v && z > 6 && font.widthOfTextAtSize(v, z) > f.w - 4) z -= 0.5; tf.setFontSize(z); } catch (e) { console.warn(e); } };
     const was = f => { try { return form.getTextField(f.name).getText() || ""; } catch (e) { return ""; } };
     // Round 14: the sheet stays as it was. Name / Medicaid # / agency are kept when the sheet already has them
     // (on an agency's shared sheet the name is changed to this client); month and total are written in the sheet's own style.
@@ -1807,6 +1811,7 @@ async function pdfFill(M, plan, d) {
     Object.entries(plan.cols).forEach(([ro, list]) => { const ex = styleOf(list); list.forEach((f, i) => put(f, d.rows[i] ? like(ro, rowVal(d.rows[i], ro), ex) : "")); });
     if (!Object.keys(plan.cols).length) fit = 0;
     try { form.updateFieldAppearances(font); } catch (e) { console.warn(e); }
+    money.forEach(([tf, v]) => { try { tf.setText("$ " + v); tf.updateAppearances(font); tf.acroField.setValue(PDFLib.PDFHexString.fromText(v)); } catch (e) { console.warn(e); } });
   } else {
     const W = PDFLib.rgb(1, 1, 1), K = PDFLib.rgb(0, 0, 0), pages = doc.getPages();
     const box = (pg, x, yc, w, h) => pg.drawRectangle({ x, y: yc - h / 2, width: w, height: h, color: W });
