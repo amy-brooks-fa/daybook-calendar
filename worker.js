@@ -103,8 +103,43 @@ async function handle(req, env) {
         const r = await env.DB.prepare("SELECT " + COLS + " FROM entries WHERE name LIKE ? ORDER BY date,time LIMIT 200").bind("%" + q + "%").all();
         return json({ entries: r.results || [] });
       }
+      // Round 12: each agency's billing cover sheet (.docx/.xlsx), stored base64 in chunks (D1 rows stay small), plus its saved "where things go" mapping.
+      if (parts[3] === "sheets" && !id && req.method === "GET") {
+        const r = await env.DB.prepare("SELECT agency_key,agency,filename,kind,size,mapping,updated_at FROM sheets ORDER BY agency_key").all();
+        return json({ sheets: r.results || [] });
+      }
+      if (parts[3] === "sheets" && id) {
+        const ak = key(decodeURIComponent(id)).slice(0, 80);
+        if (req.method === "GET") {
+          const m = await env.DB.prepare("SELECT agency_key,agency,filename,kind,size,mapping,updated_at FROM sheets WHERE agency_key=?").bind(ak).first();
+          if (!m) return json({ error: "No sheet for this agency." }, 404);
+          const ps = await env.DB.prepare("SELECT data FROM sheet_parts WHERE agency_key=? ORDER BY idx").bind(ak).all();
+          return json({ sheet: { ...m, data: (ps.results || []).map(x => x.data).join("") } });
+        }
+        if (req.method === "DELETE") {
+          await env.DB.batch([env.DB.prepare("DELETE FROM sheets WHERE agency_key=?").bind(ak), env.DB.prepare("DELETE FROM sheet_parts WHERE agency_key=?").bind(ak)]);
+          return json({ ok: true });
+        }
+        if (req.method === "PUT") {
+          const b = await req.json();
+          const mapping = b.mapping == null ? null : JSON.stringify(b.mapping).slice(0, 20000);
+          if (b.data == null) { // only the mapping changes
+            const r = await env.DB.prepare("UPDATE sheets SET mapping=?, updated_at=? WHERE agency_key=?").bind(mapping, now, ak).run();
+            return json({ ok: true });
+          }
+          const data = String(b.data), kind = String(b.kind || "");
+          if (!/^(docx|xlsx)$/.test(kind)) return json({ error: "Only Word (.docx) or Excel (.xlsx) files." }, 400);
+          if (!/^[A-Za-z0-9+/=]+$/.test(data) || data.length > 4200000) return json({ error: "The file is too big (3 MB at most)." }, 400);
+          const CH = 700000, st = [env.DB.prepare("DELETE FROM sheet_parts WHERE agency_key=?").bind(ak)];
+          for (let i = 0; i * CH < data.length; i++) st.push(env.DB.prepare("INSERT INTO sheet_parts (agency_key,idx,data) VALUES (?,?,?)").bind(ak, i, data.slice(i * CH, (i + 1) * CH)));
+          st.push(env.DB.prepare("INSERT INTO sheets (agency_key,agency,filename,kind,size,parts,mapping,updated_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(agency_key) DO UPDATE SET agency=excluded.agency,filename=excluded.filename,kind=excluded.kind,size=excluded.size,parts=excluded.parts,mapping=excluded.mapping,updated_at=excluded.updated_at")
+            .bind(ak, txt(b.agency, 80), txt(b.filename, 120), kind, Math.round(data.length * 3 / 4), Math.ceil(data.length / CH), mapping, now));
+          await env.DB.batch(st);
+          return json({ ok: true });
+        }
+      }
       if (parts[3] === "clients" && !id && req.method === "GET") {
-        const r = await env.DB.prepare("SELECT c.name_key,c.name,c.rate,c.phone,c.email,c.note,c.agency,(SELECT COUNT(*) FROM entries e WHERE lower(e.name)=c.name_key) AS bookings FROM clients c ORDER BY lower(c.name)").all();
+        const r = await env.DB.prepare("SELECT c.name_key,c.name,c.rate,c.phone,c.email,c.note,c.agency,c.medicaid,(SELECT COUNT(*) FROM entries e WHERE lower(e.name)=c.name_key) AS bookings FROM clients c ORDER BY lower(c.name)").all();
         return json({ clients: r.results || [] });
       }
       if (parts[3] === "clients" && !id && req.method === "POST") {
@@ -114,7 +149,7 @@ async function handle(req, env) {
         const ex = await env.DB.prepare("SELECT name FROM clients WHERE name_key=?").bind(key(name)).first();
         if (ex) return json({ error: ex.name + " is already in your clients." }, 409);
         await setClientRate(env, name, num(b.rate));
-        await env.DB.prepare("UPDATE clients SET phone=?,email=?,note=?,agency=? WHERE name_key=?").bind(txt(b.phone, 40) || null, txt(b.email, 120) || null, txt(b.note, 300) || null, txt(b.agency, 80) || null, key(name)).run();
+        await env.DB.prepare("UPDATE clients SET phone=?,email=?,note=?,agency=?,medicaid=? WHERE name_key=?").bind(txt(b.phone, 40) || null, txt(b.email, 120) || null, txt(b.note, 300) || null, txt(b.agency, 80) || null, txt(b.medicaid, 40) || null, key(name)).run();
         return json({ ok: true });
       }
       if (parts[3] === "import" && req.method === "POST") {
@@ -128,9 +163,9 @@ async function handle(req, env) {
           .forEach(r => seen[key(r.name) + "|" + r.date + "|" + r.time] = 1);
         for (const c of cl) {
           const name = txt(c.name, 80); if (!name) continue;
-          const k = key(name), rate = num(c.rate), phone = txt(c.phone, 40) || null, email = txt(c.email, 120) || null, note = txt(c.note, 300) || null, agency = txt(c.agency, 80) || null;
-          if (have[k]) { updated++; st.push(env.DB.prepare("UPDATE clients SET rate=COALESCE(?,rate),phone=COALESCE(?,phone),email=COALESCE(?,email),note=COALESCE(?,note),agency=COALESCE(?,agency),updated_at=? WHERE name_key=?").bind(rate, phone, email, note, agency, now, k)); }
-          else { added++; have[k] = 1; st.push(env.DB.prepare("INSERT INTO clients (name_key,name,rate,phone,email,note,agency,updated_at) VALUES (?,?,?,?,?,?,?,?)").bind(k, name, rate, phone, email, note, agency, now)); }
+          const k = key(name), rate = num(c.rate), phone = txt(c.phone, 40) || null, email = txt(c.email, 120) || null, note = txt(c.note, 300) || null, agency = txt(c.agency, 80) || null, medicaid = txt(c.medicaid, 40) || null;
+          if (have[k]) { updated++; st.push(env.DB.prepare("UPDATE clients SET rate=COALESCE(?,rate),phone=COALESCE(?,phone),email=COALESCE(?,email),note=COALESCE(?,note),agency=COALESCE(?,agency),medicaid=COALESCE(?,medicaid),updated_at=? WHERE name_key=?").bind(rate, phone, email, note, agency, medicaid, now, k)); }
+          else { added++; have[k] = 1; st.push(env.DB.prepare("INSERT INTO clients (name_key,name,rate,phone,email,note,agency,medicaid,updated_at) VALUES (?,?,?,?,?,?,?,?,?)").bind(k, name, rate, phone, email, note, agency, medicaid, now)); }
         }
         for (const x of bk) {
           const e = clean(x); if (e.err) continue;
@@ -156,10 +191,10 @@ async function handle(req, env) {
           const ex = await env.DB.prepare("SELECT name FROM clients WHERE name_key=?").bind(nk).first();
           if (ex) return json({ error: ex.name + " is already in your clients." }, 409);
         }
-        const extra = ["phone", "email", "note", "agency"].filter(f => b[f] !== undefined);
+        const extra = ["phone", "email", "note", "agency", "medicaid"].filter(f => b[f] !== undefined);
         await env.DB.batch([
           env.DB.prepare("UPDATE clients SET name_key=?, name=?, rate=?, updated_at=?" + extra.map(f => "," + f + "=?").join("") + " WHERE name_key=?")
-            .bind(nk, name, num(b.rate), now, ...extra.map(f => txt(b[f], f === "phone" ? 40 : f === "email" ? 120 : f === "agency" ? 80 : 300) || null), old),
+            .bind(nk, name, num(b.rate), now, ...extra.map(f => txt(b[f], f === "phone" ? 40 : f === "email" ? 120 : f === "agency" || f === "medicaid" ? (f === "agency" ? 80 : 40) : 300) || null), old),
           env.DB.prepare("UPDATE entries SET name=?, updated_at=? WHERE lower(name)=?").bind(name, now, old),
         ]);
         return json({ ok: true });

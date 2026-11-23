@@ -32,6 +32,7 @@ import json,sys,re
 cl=json.load(sys.stdin)["clients"]; out=set()
 for c in cl:
   out.add(c["name"])
+  if c.get("medicaid") and len(c["medicaid"]) >= 4: out.add(c["medicaid"])   # Medicaid numbers never go to GitHub either
   for w in re.findall(r"[A-Za-z]{4,}", c["name"]):
     if w.lower() not in ("esther",): out.add(w)   # Esther = also the holiday name Taanis Esther in the page
 print("\n".join(sorted(out)))' > /tmp/gh-names.txt

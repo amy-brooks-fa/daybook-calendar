@@ -140,6 +140,28 @@ table.bk tr.tot td{border-bottom:0;border-top:2px solid var(--ink);font-weight:7
 .grand{margin-top:16px;background:var(--ink);color:#fff;border-radius:var(--r);padding:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .grand div b{display:block;font-size:22px}.grand div{font-size:13px;opacity:.9}
 .printonly{display:none}
+.shlist .shrow{display:flex;flex-direction:column;gap:8px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:8px}
+.shrow .nm{font-weight:600;font-size:18px}.shrow .meta{font-size:14px;color:var(--muted);word-break:break-word}
+.shbtns{display:flex;gap:8px;flex-wrap:wrap}.shbtns .btn{height:44px;flex:1;min-width:90px}
+.mrow{border-top:1px solid var(--line);padding:6px 0 10px}.mrow label{margin-top:6px}.mfound{font-size:14px;margin:0 0 6px}.mfound .cols{color:var(--muted);margin-top:2px}
+.mrow .f.sel{font-size:15px;height:46px}
+.miss{color:#8E1B21}
+.covbtn{width:100%;margin-top:14px;height:50px}
+.covmonth{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 10px}.covmonth b{font-size:18px}
+.covgrid{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:16px;margin-bottom:6px}.covgrid span{color:var(--muted)}
+.covbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.covbtns .btn{height:52px}
+.covprev{border:1px solid var(--line);border-radius:8px;max-height:52vh;overflow:auto;background:#EDEAE4;padding:6px}
+.covprev section.docx{transform-origin:top left;margin:0 auto 8px!important;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.xprev{background:#fff;padding:8px;overflow:auto}.xprev table,#printArea table{border-collapse:collapse;font-size:13px}.xprev td,#printArea .xprev td{border:1px solid #ccc;padding:3px 6px;white-space:nowrap}
+.repcov{margin-top:10px;height:44px;width:100%}
+#coverDlg{width:min(860px,calc(100% - 16px))}
+#printArea{display:none}
+@media print{
+  body.printcover > *:not(#printArea){display:none!important}
+  body.printcover #printArea{display:block}
+  body.printcover #printArea section.docx{box-shadow:none!important;margin:0!important;padding:0!important;width:auto!important;min-height:0!important}
+  body.printcover #printArea .docx-wrapper{background:#fff!important;padding:0!important}
+}
 @media print{
   @page{margin:14mm}
   html,body{background:#fff;font-size:12pt}
@@ -254,8 +276,9 @@ details.ugrp summary{cursor:pointer;font-size:13px;letter-spacing:.06em;text-tra
     </header>
     <button class="btn primary" id="newClientBtn2" style="width:100%;height:54px;font-size:17px">+ New client</button>
     <button class="btn up" id="upBtn2" style="width:100%;height:54px;margin-top:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Upload a file (Excel, Word, PDF)</button>
-    <p class="uphint">The file can be a list of clients with columns like <b>Name</b>, <b>Agency</b> (or Billed to), <b>Notes</b>. Bookings with <b>Date</b>, <b>Start</b>, <b>End</b> and <b>Client</b> are added to the calendar too. You see everything before it is saved.</p>
+    <p class="uphint">The file can be a list of clients with columns like <b>Name</b>, <b>Agency</b> (or Billed to), <b>Medicaid #</b>, <b>Notes</b>. Bookings with <b>Date</b>, <b>Start</b>, <b>End</b> and <b>Client</b> are added to the calendar too. You see everything before it is saved.</p>
     <input type="file" id="upFile" accept=".xlsx,.xls,.xlsm,.csv,.ods,.txt,.docx,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf" hidden>
+    <button class="btn outline" id="sheetsBtn" style="width:100%;height:54px;margin-top:12px;font-size:17px">Agency cover sheets (Word / Excel)</button>
     <p class="sub" id="cliSub" style="margin-top:12px"></p>
     <ul class="list" id="cliList"></ul>
   </div>
@@ -332,12 +355,15 @@ details.ugrp summary{cursor:pointer;font-size:13px;letter-spacing:.06em;text-tra
     <label for="cagency">Bills to (agency)</label>
     <select class="f sel" id="cagency"></select>
     <input class="f agrow" id="cagencyNew" autocomplete="off" maxlength="80" placeholder="Type the new agency's name" hidden>
+    <label for="cmed">Medicaid # (optional)</label>
+    <input class="f" id="cmed" autocomplete="off" maxlength="40" placeholder="For the billing cover sheet">
     <div class="hint" id="cliHint"></div>
     <div class="err" id="cerr"></div>
     <div class="actions">
       <button type="button" class="btn" id="cCancel">Cancel</button>
       <button type="submit" class="btn primary" id="cSave">Save</button>
     </div>
+    <button type="button" class="btn outline covbtn" id="cCover">Billing cover sheet</button>
     <div class="actions" id="cDelRow" style="margin-top:10px"><button type="button" class="btn danger" id="cDel">Delete this client</button></div>
   </form>
 </dialog>
@@ -389,6 +415,37 @@ details.ugrp summary{cursor:pointer;font-size:13px;letter-spacing:.06em;text-tra
 </dialog>
 
 <div class="toast" id="toast"></div>
+<dialog id="sheetsDlg">
+  <div class="dlg">
+    <h3>Agency cover sheets</h3>
+    <p class="sub" style="margin-top:-8px">Upload each agency's billing cover sheet once (Word .docx or Excel .xlsx). Then open a client and tap <b>Billing cover sheet</b>: the name, Medicaid #, month and every day's hours are filled in for you.</p>
+    <ul class="list shlist" id="shList"></ul>
+    <input type="file" id="sheetFile" accept=".docx,.xlsx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+    <div class="err" id="shErr"></div>
+    <div class="actions"><button type="button" class="btn" id="shClose">Close</button></div>
+  </div>
+</dialog>
+<dialog id="mapDlg">
+  <div class="dlg">
+    <h3 id="mapTitle">Where things go</h3>
+    <div id="mapBody"></div>
+    <div class="err" id="mapErr"></div>
+    <div class="actions"><button type="button" class="btn" id="mapCancel">Cancel</button><button type="button" class="btn primary" id="mapSave">Save</button></div>
+  </div>
+</dialog>
+<dialog id="coverDlg">
+  <div class="dlg">
+    <h3>Billing cover sheet</h3>
+    <div class="covhead"><b id="covName"></b></div>
+    <div class="covmonth"><button type="button" class="btn" id="covPrevM" aria-label="Previous month">‹</button><b id="covMonth"></b><button type="button" class="btn" id="covNextM" aria-label="Next month">›</button></div>
+    <div id="covInfo"></div>
+    <div class="err" id="covErr"></div>
+    <div class="covbtns"><button type="button" class="btn primary" id="covDl">Download file</button><button type="button" class="btn outline" id="covPrint">Print</button></div>
+    <div class="covprev" id="covPrev"></div>
+    <div class="actions"><button type="button" class="btn" id="covClose">Close</button></div>
+  </div>
+</dialog>
+<div id="printArea"></div>
 
 <script>
 /* Jewish holidays, diaspora (2-day Yom Tov), Ashkenazi spelling. Generated with @hebcal/core 6.16.1 on 2026-11-22. Range 2025-2031. */
@@ -698,10 +755,10 @@ function renderTotals() {
     gH += tH; gA += tA; gN += g.list.length; missing += noRate;
     const ak = agencyOf(k) ? nkey(agencyOf(k)) : "~none", S = sec[ak] = sec[ak] || { name: agencyOf(k) || "No agency", h: 0, a: 0, n: 0, c: 0, html: "" };
     S.h += tH; S.a += tA; S.n += g.list.length; S.c++;
-    S.html += '<section class="client"><h3>' + esc(g.name) + "</h3>" +
+    S.html += '<section class="client"><h3>' + esc(g.name) + "</h3>" + (clients[k] && clients[k].medicaid ? '<div class="rateline" style="margin-bottom:0">Medicaid #: <b>' + esc(clients[k].medicaid) + "</b></div>" : "") +
       (byAg ? '<div class="rateline" style="margin-bottom:0">Bills to: <b class="billto">' + esc(agencyOf(k) || "no agency") + "</b></div>" : "") +
       '<table class="bk" style="margin-top:8px"><colgroup><col style="width:20%"><col style="width:15%"><col><col style="width:16%"></colgroup><thead><tr><th>Date</th><th>Day</th><th>Time</th><th class=r>Hours</th></tr></thead><tbody>' + rows +
-      '<tr class="tot"><td colspan=3>Total, ' + g.list.length + (g.list.length === 1 ? " booking" : " bookings") + "</td><td class=r>" + fmtH(tH) + "</td></tr></tbody></table></section>";
+      '<tr class="tot"><td colspan=3>Total, ' + g.list.length + (g.list.length === 1 ? " booking" : " bookings") + "</td><td class=r>" + fmtH(tH) + '</td></tr></tbody></table><button class="btn outline repcov noprint" data-cover="' + esc(k) + '">Billing cover sheet</button></section>';
   });
   Object.keys(sec).sort((a, b) => a === "~none" ? 1 : b === "~none" ? -1 : sec[a].name.localeCompare(sec[b].name)).forEach(a => {
     const S = sec[a];
@@ -726,7 +783,7 @@ async function loadCli() {
   const list = Object.values(clients).sort((a, b) => a.name.localeCompare(b.name));
   $("cliSub").textContent = list.length ? list.length + (list.length === 1 ? " client" : " clients") + ". Tap one to change it." : "";
   $("cliList").innerHTML = list.length ? list.map(c => '<li><button class="cli" data-cli="' + esc(c.name_key) + '"><span><div class="nm">' + esc(c.name) + '</div><div class="meta">' +
-    (c.agency ? '<span class="billto">Bills to ' + esc(c.agency) + "</span> · " : "") + (c.bookings ? c.bookings + (c.bookings == 1 ? " booking" : " bookings") : "No bookings yet") + [c.note].filter(Boolean).map(v => " · " + esc(v)).join("") + '</div></span></button></li>').join("")
+    (c.agency ? '<span class="billto">Bills to ' + esc(c.agency) + "</span> · " : "") + (c.medicaid ? "Medicaid # " + esc(c.medicaid) + " · " : "") + (c.bookings ? c.bookings + (c.bookings == 1 ? " booking" : " bookings") : "No bookings yet") + [c.note].filter(Boolean).map(v => " · " + esc(v)).join("") + '</div></span></button></li>').join("")
     : '<li class="empty">No clients yet. Tap "+ New client" to add one.</li>';
 }
 const BASE_AGENCIES = ["Hamaspik", "HCS", "Rayim", "Yedei Chesed", "Metropolitan"];
@@ -741,7 +798,7 @@ function openCli(c) {
   editingCli = c || null;
   $("cliTitle").textContent = c ? "Change client" : "New client";
   $("cname").value = c ? c.name : ""; $("crate").value = c && c.rate != null ? c.rate : "";
-  $("cphone").value = c && c.phone || ""; $("cemail").value = c && c.email || ""; $("cnote").value = c && c.note || ""; fillAgency(c && c.agency || "");
+  $("cphone").value = c && c.phone || ""; $("cemail").value = c && c.email || ""; $("cnote").value = c && c.note || ""; fillAgency(c && c.agency || ""); $("cmed").value = c && c.medicaid || ""; $("cCover").hidden = !c;
   $("cerr").textContent = "";
   $("cliHint").textContent = c && c.bookings ? "Changing the name also changes it on this client's " + c.bookings + (c.bookings == 1 ? " booking." : " bookings.") + "" : "";
   $("cDelRow").style.display = c ? "flex" : "none";
@@ -755,7 +812,7 @@ $("cf").addEventListener("submit", async e => {
   let agency = $("cagency").value;
   if (agency === "__new") { agency = $("cagencyNew").value.trim().replace(/\s+/g, " "); if (!agency) return ($("cerr").textContent = "Please type the new agency's name, or pick one from the list."); const ex = agencies().find(a => nkey(a) === nkey(agency)); if (ex) agency = ex; }
   $("cSave").disabled = true;
-  const body = JSON.stringify({ name, rate: rv === "" ? null : Number(rv), phone: $("cphone").value.trim(), email: $("cemail").value.trim(), note: $("cnote").value.trim(), agency });
+  const body = JSON.stringify({ name, rate: rv === "" ? null : Number(rv), phone: $("cphone").value.trim(), email: $("cemail").value.trim(), note: $("cnote").value.trim(), agency, medicaid: $("cmed").value.trim() });
   const { status, data } = editingCli ? await api("clients/" + encodeURIComponent(editingCli.name_key), { method: "PUT", body }) : await api("clients", { method: "POST", body });
   $("cSave").disabled = false;
   if (status !== 200) return ($("cerr").textContent = (data && data.error) || "Could not save. Check the internet and try again.");
@@ -940,6 +997,7 @@ function parseLine(raw) {
 
 // Header names it understands (compared after lowercasing and removing punctuation).
 const HEAD = [
+  ["medicaid", /\b(medicaid|cin|medicaid id|medicaid number|medicaid no|member id|recipient id|mmis)\b/],
   ["agency", /^(agency|agency name|billing agency|billed to|bill to|billed|billing|payer|payor|payer name|insurance|insurance company|insurance name|funding|funding source|funder|funded by)$|\bagency\b/],
   ["email", /^(e ?mail|email address|mail)$/],
   ["phone", /\b(phone|tel|telephone|mobile|cell|cellphone|whatsapp|phone number|contact number)\b/],
@@ -954,7 +1012,7 @@ const HEAD = [
   ["name", /^(name|names|client|clients|client name|customer|customers|customer name|full name|student|student name|patient|patient name|contact|contact name|company|company name|business|account|account name|member|who)$/],
   ["note", /\b(notes?|comments?|remarks?|details?|description|address|info|memo)\b/],
 ];
-const LABEL = { agency: "agency (bills to)", name: "client name", first: "first name", last: "last name", rate: "rate per hour", phone: "phone", email: "email", note: "note", date: "date", start: "start time", end: "end time", time: "time", hours: "hours" };
+const LABEL = { medicaid: "Medicaid #", agency: "agency (bills to)", name: "client name", first: "first name", last: "last name", rate: "rate per hour", phone: "phone", email: "email", note: "note", date: "date", start: "start time", end: "end time", time: "time", hours: "hours" };
 const normHead = v => String(v == null ? "" : v).toLowerCase().replace(/\(.*?\)/g, m => m.includes("$") || /hr|hour/.test(m) ? " " + m.replace(/[()]/g, "") + " " : " ").replace(/[^a-z0-9$\/ ]+/g, " ").replace(/\s+/g, " ").trim();
 function headMap(row) {
   const map = {}, used = {};
@@ -1026,6 +1084,7 @@ function tableItems(rows, where, xs, isLines) {
     if (!blank(g("phone"))) it.phone = str(g("phone"));
     if (!blank(g("email"))) it.email = str(g("email"));
     if (!blank(g("note"))) it.note = str(g("note"));
+    if (map.medicaid != null && !blank(g("medicaid"))) it.medicaid = str(g("medicaid")).replace(/\s+/g, "");
     if (map.agency != null && !blank(g("agency"))) it.agency = str(g("agency")).replace(/\s+/g, " ");
     if (map.date != null && !blank(g("date"))) { const d = cellDate(g("date")); if (d.bad) it.bad = "the date \"" + str(g("date")) + "\" was not understood"; else { it.date = d.date; if (d.time) it.time = d.time; } }
     const tv = g("time") != null && !blank(g("time")) ? g("time") : (g("start") == null && map.hours != null && typeof g("hours") === "string" && /[-–]/.test(g("hours")) ? g("hours") : null);
@@ -1116,7 +1175,7 @@ async function buildPlan(items, fileName, cols) {
     const c = cmap[k] = cmap[k] || { key: k, name: clients[k] ? clients[k].name : i.name, rates: {}, rows: 0 };
     c.rows++;
     if (i.rate != null) { if (!i.booking) c.rate = i.rate; c.rates[i.rate] = (c.rates[i.rate] || 0) + 1; }
-    ["phone", "email", "note", "agency"].forEach(f => { if (i[f] && !i.booking) c[f] = i[f]; else if (i[f] && f !== "note" && !c[f]) c[f] = i[f]; });
+    ["phone", "email", "note", "agency", "medicaid"].forEach(f => { if (i[f] && !i.booking) c[f] = i[f]; else if (i[f] && f !== "note" && !c[f]) c[f] = i[f]; });
   });
   const cl = Object.values(cmap).map(c => {
     if (c.rate == null) { const r = Object.entries(c.rates).sort((a, b) => b[1] - a[1])[0]; if (r) c.rate = Number(r[0]); }
@@ -1124,7 +1183,7 @@ async function buildPlan(items, fileName, cols) {
     if (!ex) c.status = "new";
     else {
       c.changes = [];
-      ["note", "agency"].forEach(f => { if (c[f] && c[f] !== ex[f]) c.changes.push(f + " " + (ex[f] ? "“" + ex[f] + "” → " : "") + "“" + c[f] + "”"); });
+      ["note", "agency", "medicaid"].forEach(f => { if (c[f] && c[f] !== ex[f]) c.changes.push((f === "medicaid" ? "Medicaid #" : f) + " " + (ex[f] ? "“" + ex[f] + "” → " : "") + "“" + c[f] + "”"); });
       c.status = c.changes.length ? "update" : "same";
     }
     c.on = c.status !== "same";
@@ -1164,7 +1223,7 @@ function renderPlan() {
   if (!cl.length && !bk.length) h += '<p class="norate">No clients were found in this file. Check the format below and try another file.</p>' + FORMAT_HELP;
   if (P.cols && P.cols.length) h += '<div class="cols">Columns read: ' + P.cols.filter(c => !/rate|phone|email/.test(c[1])).map(c => "<b>" + esc(c[0]) + "</b> as " + c[1]).join(", ") + (P.unused && P.unused.length ? ". Not used: " + P.unused.map(esc).join(", ") : "") + ".</div>";
   const cRow = (c, i) => '<label class="urow"><input type="checkbox" data-uc="' + i + '"' + (c.on ? " checked" : "") + '><span><div class="u1">' + esc(c.name) + "</div><div class=u2>" +
-    (c.status === "update" ? '<span class="ch">' + esc(c.changes.join(", ")) + "</span>" : [c.agency ? "bills to " + c.agency : "", c.note].filter(Boolean).map(esc).join(" · ")) + "</div></span></label>";
+    (c.status === "update" ? '<span class="ch">' + esc(c.changes.join(", ")) + "</span>" : [c.agency ? "bills to " + c.agency : "", c.medicaid ? "Medicaid # " + c.medicaid : "", c.note].filter(Boolean).map(esc).join(" · ")) + "</div></span></label>";
   if (nNew) h += '<div class="ugrp"><h4>New clients (' + nNew + ")</h4>" + cl.map((c, i) => c.status === "new" ? cRow(c, i) : "").join("") + "</div>";
   if (nUp) h += '<div class="ugrp"><h4>Clients to update (' + nUp + ")</h4>" + cl.map((c, i) => c.status === "update" ? cRow(c, i) : "").join("") + "</div>";
   if (bk.length) h += '<div class="ugrp"><h4>Bookings for the calendar (' + bk.length + ")</h4>" + bk.map((b, i) => '<label class="urow' + (b.clash ? " c" : "") + (b.dup ? " sk" : "") + '"><input type="checkbox" data-ub="' + i + '"' + (b.on ? " checked" : "") + (b.dup ? " disabled" : "") + '><span><div class="u1">' + esc(b.name) + "</div><div class=u2>" + esc(fmtShort(b.date)) + ", " + fmtTime(b.time) + " – " + fmtTime(b.end) + (b.endGuess ? " (no end given: 1 hour)" : "") + "" + "</div>" +
@@ -1216,7 +1275,7 @@ async function readUpload(file) {
 }
 async function saveUpload() {
   const P = upPlan; if (!P) return;
-  const cl = P.clients.filter(c => c.on).map(c => ({ name: c.name, note: c.note || "", agency: c.agency || "" }));
+  const cl = P.clients.filter(c => c.on).map(c => ({ name: c.name, note: c.note || "", agency: c.agency || "", medicaid: c.medicaid || "" }));
   const bk = P.bookings.filter(b => b.on).map(b => ({ name: b.name, date: b.date, time: b.time, end: b.end, rate: null, note: b.note }));
   $("upSave").disabled = true; $("upSave").textContent = "Saving…"; $("uperr").textContent = "";
   const tot = { added: 0, updated: 0, booked: 0, dup: 0 };
@@ -1242,6 +1301,454 @@ $("upBody").addEventListener("change", e => {
 });
 
 if (location.hash === "#totals") showTab("tot"); else if (location.hash === "#clients") showTab("cli"); else load();
+/* ---------- Round 12: agency billing cover sheets (Word .docx / Excel .xlsx) ----------
+   Each agency's own form is uploaded once (Clients tab -> Agency cover sheets), stored on the server.
+   "Billing cover sheet" (client dialog or Totals) fills it for one client + month:
+   client name, Medicaid #, agency, month, every booking (date, day, start, end, hours, what was done), total hours.
+   How it finds the spots: {{name}}-style placeholders if the form has them; otherwise labels
+   ("Client Name:", "Medicaid #", "Member ID", "Month", "Total") and the dates table (header row with Date / Time In / Hours...);
+   anything it can't find can be pointed to by hand (saved per agency); still missing -> written above the table / below the sheet. */
+LIBS.jszip = ["https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js", "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js", "https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"];
+LIBS.docxprev = ["https://cdn.jsdelivr.net/npm/docx-preview@0.3.3/dist/docx-preview.min.js", "https://unpkg.com/docx-preview@0.3.3/dist/docx-preview.min.js"];
+const W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main", S_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main", XML_NS = "http://www.w3.org/XML/1998/namespace";
+const CV_FIELDS = [["name", "Client name"], ["medicaid", "Medicaid #"], ["agency", "Agency"], ["month", "Month"], ["total", "Total hours"]];
+const CV_ROLES = { date: "Date", day: "Day", start: "Start", end: "End", time: "Time", hours: "Hours", done: "What was done" };
+const FIELD_RX = [
+  ["medicaid", /(medicaid|\bcin\b|\bmcd\b|\bmmis\b|member id|recipient id|client id|participant id|individual id|consumer id|patient id)/],
+  ["name", /^((client|member|patient|participant|individual|consumer|recipient|enrollee|customer|child|student)( s)?s? )?(full )?name$|^name of (the )?(client|member|individual|participant|consumer|patient|recipient)$|^(client|member|participant|individual|consumer|patient|recipient)$/],
+  ["agency", /^(agency|provider|provider agency|agency name|provider name|company|company name|organization|vendor|billing agency)$/],
+  ["month", /^((service|billing) )?(month|period)( of service)?( ?\/ ?year)?$|^month( and| ?\/) ?year$|^(for )?(the )?month of$|^service period$|^month year$/],
+  ["total", /^total( (hours|hrs|units|time))?( for (the )?month)?$|^monthly total( hours)?$|^total hours billed$/],
+];
+const ROLE_RX = [
+  ["date", /^(service )?dates?( of service)?$|^dos$|^(visit|session|service) date$|^date of (visit|session)$/],
+  ["day", /^(day|day of week|weekday)$/],
+  ["start", /^(start|start time|time in|in|from|begin|begin time|arrival|arrival time|time started|starting time)$/],
+  ["end", /^(end|end time|time out|out|to|finish|finish time|departure|departure time|time ended|stop|ending time)$/],
+  ["time", /^(time|times|time of service|service time|session time)$/],
+  ["hours", /^(hours|hrs|hr|# ?of hours|no of hours|number of hours|total hours|total hrs|units|duration|hours worked|time spent|hours billed)$/],
+  ["done", /(activit|service|description|notes?$|what was done|task|comment|goal|progress|summary|purpose|reason|support)/],
+];
+const normL = t => String(t || "").toLowerCase().replace(/['’]/g, " ").replace(/[^a-z0-9#\/ ]+/g, " ").replace(/#/g, " # ").replace(/\s+/g, " ").replace(/ # ?$/, "").replace(/ (no|number)$/, "").trim();
+const fieldOf = t => { const n = normL(t); if (!n || n.length > 40) return null; for (const [k, re] of FIELD_RX) if (re.test(n)) return k; return null; };
+const roleOf = t => { const n = normL(t); if (!n || n.length > 40) return null; for (const [k, re] of ROLE_RX) if (re.test(n)) return k; return null; };
+const PH = /\{\{\s*([a-zA-Z]+)\s*\}\}/g;
+const ROW_KEYS = ["date", "day", "start", "end", "time", "hours", "done"];
+const b64 = { enc: u8 => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); },
+  dec: s => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; } };
+const fmtUS = s => { const [y, m, d] = s.split("-"); return m + "/" + d + "/" + y; };
+
+/* ---- the data for one client + month ---- */
+async function coverData(ck, y, m) {
+  const c = clients[ck] || { name: ck };
+  const from = iso(new Date(y, m, 1)), to = iso(new Date(y, m + 1, 0));
+  const r = await api("entries?from=" + from + "&to=" + to);
+  const list = (r.data.entries || []).filter(e => nkey(e.name) === ck).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  let tot = 0;
+  const rows = list.map(e => { const h = hours(e); tot += h; return { date: fmtUS(e.date), day: parse(e.date).toLocaleDateString("en-US", { weekday: "short" }), start: fmtTime(e.time), end: fmtTime(endT(e)), time: span(e), hours: Math.round(h * 100) / 100, done: e.note || "" }; });
+  return { name: c.name, medicaid: c.medicaid || "", agency: c.agency || "", month: MONTHS[m] + " " + y, total: Math.round(tot * 100) / 100, today: fmtUS(iso(new Date())), rows };
+}
+const cvVal = (d, k) => k === "total" ? String(d.total) : d[k] != null ? String(d[k]) : "";
+
+/* ================= Word (.docx) ================= */
+function wText(p) { // text of a paragraph + where each character lives
+  const map = []; let s = "";
+  const walk = n => { for (const ch of n.childNodes) { if (ch.nodeType !== 1) continue;
+    if (ch.namespaceURI === W_NS && ch.localName === "t") { for (let i = 0; i < ch.textContent.length; i++) map.push([ch, i]); s += ch.textContent; }
+    else if (ch.namespaceURI === W_NS && (ch.localName === "tab")) { map.push([ch, -1]); s += "\t"; }
+    else if (ch.namespaceURI === W_NS && (ch.localName === "p" || ch.localName === "tbl")) continue;
+    else walk(ch); } };
+  walk(p); return { s, map };
+}
+function wReplace(p, a, b, val) { // replace characters [a,b) of paragraph p with val (keeps the formatting of the run at a)
+  const { map } = wText(p), doc = p.ownerDocument;
+  const newT = () => { const t = doc.createElementNS(W_NS, "w:t"); t.setAttributeNS(XML_NS, "xml:space", "preserve"); return t; };
+  let at, off = 0;
+  if (a >= map.length) { // at the end of the paragraph
+    const last = map.length ? map[map.length - 1][0] : null, lr = last && last.parentNode && last.parentNode.localName === "r" ? last.parentNode : null;
+    at = newT();
+    if (lr) lr.parentNode.insertBefore((() => { const r = doc.createElementNS(W_NS, "w:r"); const rp = [...lr.childNodes].find(x => x.localName === "rPr"); if (rp) r.appendChild(rp.cloneNode(true)); r.appendChild(at); return r; })(), lr.nextSibling);
+    else { const r = doc.createElementNS(W_NS, "w:r"); r.appendChild(at); p.appendChild(r); }
+  } else if (map[a][1] === -1) { at = newT(); map[a][0].parentNode.insertBefore(at, map[a][0]); }
+  else { at = map[a][0]; off = map[a][1]; }
+  const del = new Map();
+  for (let i = a; i < b && i < map.length; i++) { const [n, j] = map[i]; if (j === -1) n.remove(); else del.set(n, (del.get(n) || new Set()).add(j)); }
+  del.forEach((set, n) => { if (n !== at) n.textContent = [...n.textContent].filter((_, k) => !set.has(k)).join(""); });
+  const ch = [...at.textContent], ds = del.get(at) || new Set();
+  at.textContent = ch.slice(0, off).join("") + val + ch.slice(off).filter((_, k) => !ds.has(k + off)).join("");
+  at.setAttributeNS(XML_NS, "xml:space", "preserve");
+}
+function wSetCell(tc, val, styleFrom) {
+  const doc = tc.ownerDocument, ps = [...tc.childNodes].filter(x => x.localName === "p");
+  let p = ps[0]; if (!p) { p = doc.createElementNS(W_NS, "w:p"); tc.appendChild(p); }
+  const src = [...tc.getElementsByTagNameNS(W_NS, "r")][0] || (styleFrom && [...styleFrom.getElementsByTagNameNS(W_NS, "r")][0]);
+  const rp = src && [...src.childNodes].find(x => x.localName === "rPr");
+  ps.slice(1).forEach(x => x.remove());
+  [...p.childNodes].filter(x => x.localName !== "pPr").forEach(x => x.remove());
+  const r = doc.createElementNS(W_NS, "w:r"); if (rp) r.appendChild(rp.cloneNode(true));
+  String(val).split("\n").forEach((line, i) => { if (i) r.appendChild(doc.createElementNS(W_NS, "w:br")); const t = doc.createElementNS(W_NS, "w:t"); t.setAttributeNS(XML_NS, "xml:space", "preserve"); t.textContent = line; r.appendChild(t); });
+  p.appendChild(r);
+}
+const kids = (n, name) => [...n.childNodes].filter(x => x.nodeType === 1 && x.localName === name);
+const cellText = tc => kids(tc, "p").map(p => wText(p).s).join(" ").trim();
+async function docxModel(u8) {
+  const zip = await JSZip.loadAsync(u8), parts = [];
+  const names = Object.keys(zip.files).filter(n => /^word\/(document|header\d*|footer\d*)\.xml$/.test(n)).sort((a, b) => (a === "word/document.xml" ? -1 : b === "word/document.xml" ? 1 : a.localeCompare(b)));
+  for (const n of names) { const doc = new DOMParser().parseFromString(await zip.file(n).async("string"), "application/xml"); parts.push({ n, doc, ps: [...doc.getElementsByTagNameNS(W_NS, "p")] }); }
+  const main = parts.find(x => x.n === "word/document.xml");
+  if (!main) throw new Error("This Word file has no document inside.");
+  const tables = [...main.doc.getElementsByTagNameNS(W_NS, "tbl")];
+  const spots = []; parts.forEach(pt => pt.ps.forEach((p, i) => { const s = wText(p).s.trim(); if (s) spots.push({ id: pt.n.replace(/^word\/|\.xml$/g, "") + ":" + i, text: s, p, part: pt.n }); }));
+  const rows = []; tables.forEach((t, ti) => kids(t, "tr").forEach((tr, ri) => { const cs = kids(tr, "tc").map(cellText); if (cs.filter(Boolean).length >= 2) rows.push({ id: "t" + ti + "r" + ri, text: cs.filter(Boolean).join(" | "), tbl: t, tr, cells: cs }); }));
+  return { kind: "docx", zip, parts, main, tables, spots, rows };
+}
+// inline label spots in a paragraph: [{field, at, end}] (value goes into [at,end))
+function wLabels(s) {
+  const out = [];
+  const re = /:|_{3,}/g; let m;
+  while ((m = re.exec(s))) {
+    const i = m.index; let st = 0;
+    for (const sep of [/\t/g, /_{2,}/g, / {2,}/g, /:/g]) { let k; sep.lastIndex = 0; while ((k = sep.exec(s.slice(0, i)))) st = Math.max(st, k.index + k[0].length); }
+    const lab = s.slice(st, i).trim(); const f = fieldOf(lab); if (!f) { if (m[0][0] === "_") re.lastIndex = i + m[0].length; continue; }
+    let j = m[0] === ":" ? i + 1 : i; const after = s.slice(j);
+    const bl = /^[ \t]*(_{2,})/.exec(after);
+    if (bl) out.push({ field: f, at: j, end: j + bl[0].length, pad: true });
+    else { const nx = /^[ \t]*($|\t|[A-Za-z][A-Za-z0-9 #\/.'’()-]{0,40}:)/.exec(after); if (nx) out.push({ field: f, at: j, end: j, pad: true }); }
+    if (m[0][0] === "_") re.lastIndex = i + m[0].length;
+  }
+  return out;
+}
+function docxPlan(M, mapping) {
+  mapping = mapping || {}; const plan = { fields: {}, table: null, ph: false };
+  // placeholders anywhere
+  M.spots.forEach(sp => { let m; PH.lastIndex = 0; while ((m = PH.exec(sp.text))) { plan.ph = true; const k = m[1].toLowerCase(); if (CV_FIELDS.some(f => f[0] === k)) (plan.fields[k] = plan.fields[k] || []).push({ how: "ph", sp }); } });
+  // labels
+  M.spots.forEach(sp => {
+    const tc = sp.p.parentNode && sp.p.parentNode.localName === "tc" ? sp.p.parentNode : null;
+    if (tc) { const f = fieldOf(sp.text.replace(/[:_\s]+$/, "")); const nx = tc.nextElementSibling; if (f && nx && nx.localName === "tc" && !cellText(nx)) { (plan.fields[f] = plan.fields[f] || []).push({ how: "cell", sp, tc: nx, label: sp.text }); return; } }
+    wLabels(wText(sp.p).s).forEach(L => (plan.fields[L.field] = plan.fields[L.field] || []).push({ how: "inline", sp, at: L.at, end: L.end, label: sp.text }));
+  });
+  // by-hand choices win
+  CV_FIELDS.forEach(([k]) => { const v = (mapping.fields || {})[k]; if (!v || v === "auto") return; if (v === "none") { plan.fields[k] = []; return; }
+    const sp = M.spots.find(x => x.id === v); if (!sp) return;
+    const tc = sp.p.parentNode.localName === "tc" ? sp.p.parentNode : null, nx = tc && tc.nextElementSibling;
+    if (tc && nx && nx.localName === "tc" && !cellText(nx)) plan.fields[k] = [{ how: "cell", sp, tc: nx, label: sp.text, hand: true }];
+    else { const L = wLabels(wText(sp.p).s)[0]; const s = wText(sp.p).s; plan.fields[k] = [L ? { how: "inline", sp, at: L.at, end: L.end, label: sp.text, hand: true } : { how: "inline", sp, at: s.length, end: s.length, label: sp.text, hand: true, colon: !/:\s*$/.test(s) }]; } });
+  // dates table: placeholder row, chosen row, or a header row with Date / Hours ...
+  const pick = r => { const cols = {}; r.cells.forEach((c, i) => { const ro = roleOf(c); if (ro && !Object.values(cols).includes(ro)) cols[i] = ro; }); return cols; };
+  for (const t of M.tables) for (const tr of kids(t, "tr")) { const cs = kids(tr, "tc").map(cellText); if (cs.some(c => /\{\{\s*(date|hours|start|time)\s*\}\}/i.test(c))) { const cols = {}; cs.forEach((c, i) => { const m = /\{\{\s*([a-z]+)\s*\}\}/i.exec(c); if (m && ROW_KEYS.includes(m[1].toLowerCase())) cols[i] = m[1].toLowerCase(); }); plan.table = { tbl: t, tr, tmpl: true, cols, label: "row with {{date}}" }; } }
+  if (!plan.table) {
+    const hand = mapping.table && mapping.table !== "auto" ? M.rows.find(r => r.id === mapping.table) : null;
+    const cand = hand ? [hand] : M.rows.filter(r => { const c = pick(r), v = Object.values(c); return v.length >= 2 && (v.includes("date") || (v.includes("hours") && (v.includes("start") || v.includes("time")))); });
+    if (cand[0]) plan.table = { tbl: cand[0].tbl, tr: cand[0].tr, cols: pick(cand[0]), label: cand[0].text, hand: !!hand };
+  }
+  if (mapping.table === "none") plan.table = null;
+  if (plan.table) plan.fields.total = (plan.fields.total || []).filter(x => x.hand || x.how === "ph" || !plan.table.tbl.contains(x.sp.p));
+  return plan;
+}
+async function docxFill(M, plan, d) {
+  const doc = M.main.doc, body = doc.getElementsByTagNameNS(W_NS, "body")[0];
+  // fields (later spots first inside one paragraph so positions stay right)
+  const todo = []; CV_FIELDS.forEach(([k]) => (plan.fields[k] || []).forEach(x => todo.push({ k, ...x })));
+  todo.filter(x => x.how === "cell").forEach(x => wSetCell(x.tc, cvVal(d, x.k), x.sp.p.parentNode));
+  const byP = new Map(); todo.filter(x => x.how === "inline").forEach(x => byP.set(x.sp.p, (byP.get(x.sp.p) || []).concat(x)));
+  byP.forEach(list => list.sort((a, b) => b.at - a.at).forEach(x => wReplace(x.sp.p, x.at, x.end, (x.colon ? ": " : " ") + cvVal(d, x.k) + (x.end > x.at ? " " : ""))));
+  // placeholders (single fields + today) in every paragraph
+  M.parts.forEach(pt => pt.ps.forEach(p => { let s = wText(p).s, m; const hits = []; PH.lastIndex = 0; while ((m = PH.exec(s))) { const k = m[1].toLowerCase(); if (CV_FIELDS.some(f => f[0] === k) || k === "today") hits.push([m.index, m.index + m[0].length, k]); }
+    hits.reverse().forEach(([a, b, k]) => wReplace(p, a, b, k === "today" ? d.today : cvVal(d, k))); }));
+  // dates table
+  let tbl = plan.table && plan.table.tbl, cols = plan.table && plan.table.cols;
+  if (!tbl) { // none in the form: add one at the end
+    const sect = kids(body, "sectPr")[0];
+    const p = doc.createElementNS(W_NS, "w:p"); body.insertBefore(p, sect || null); wReplace(p, 0, 0, "Service log, " + d.month);
+    const t = doc.createElementNS(W_NS, "w:tbl");
+    t.innerHTML = ""; const tp = doc.createElementNS(W_NS, "w:tblPr"); const tb = doc.createElementNS(W_NS, "w:tblBorders");
+    ["top", "left", "bottom", "right", "insideH", "insideV"].forEach(e => { const x = doc.createElementNS(W_NS, "w:" + e); x.setAttributeNS(W_NS, "w:val", "single"); x.setAttributeNS(W_NS, "w:sz", "4"); x.setAttributeNS(W_NS, "w:color", "000000"); tb.appendChild(x); });
+    const tw = doc.createElementNS(W_NS, "w:tblW"); tw.setAttributeNS(W_NS, "w:w", "5000"); tw.setAttributeNS(W_NS, "w:type", "pct"); tp.appendChild(tw); tp.appendChild(tb); t.appendChild(tp);
+    const hdr = ["Date", "Day", "Start", "End", "Hours", "What was done"];
+    const mkRow = vals => { const tr = doc.createElementNS(W_NS, "w:tr"); vals.forEach(v => { const tc = doc.createElementNS(W_NS, "w:tc"); tc.appendChild(doc.createElementNS(W_NS, "w:p")); wSetCell(tc, v); tr.appendChild(tc); }); return tr; };
+    t.appendChild(mkRow(hdr)); body.insertBefore(t, sect || null);
+    tbl = t; cols = { 0: "date", 1: "day", 2: "start", 3: "end", 4: "hours", 5: "done" };
+    plan.table = { tbl: t, tr: kids(t, "tr")[0], cols, added: true };
+  }
+  const trs = kids(tbl, "tr"), hi = trs.indexOf(plan.table.tr);
+  let totalTr = null; const avail = [];
+  if (plan.table.tmpl) avail.push(plan.table.tr);
+  for (let i = hi + 1; i < trs.length; i++) { const cs = kids(trs[i], "tc").map(cellText); if (cs.some(c => /^total/i.test(c))) { totalTr = trs[i]; break; } if (Object.keys(cols).every(ci => !cs[ci] || /\{\{/.test(cs[ci]))) avail.push(trs[i]); }
+  const proto = avail[avail.length - 1] || plan.table.tr;
+  while (avail.length < d.rows.length) { const c = proto.cloneNode(true); kids(c, "tc").forEach(tc => wSetCell(tc, "", tc)); const ref = avail.length ? avail[avail.length - 1].nextSibling : (totalTr || null); tbl.insertBefore(c, totalTr && (!avail.length) ? totalTr : ref); avail.push(c); }
+  avail.forEach((tr, i) => { const r = d.rows[i]; const tcs = kids(tr, "tc"); Object.entries(cols).forEach(([ci, ro]) => { if (tcs[ci]) wSetCell(tcs[ci], r ? String(r[ro]) : "", tcs[ci]); }); });
+  const hc = Object.entries(cols).find(e => e[1] === "hours"), hasTot = (plan.fields.total || []).length > 0;
+  if (totalTr) { const tcs = kids(totalTr, "tc"); const tgt = hc && tcs[hc[0]] && !/^total/i.test(cellText(tcs[hc[0]])) ? tcs[hc[0]] : tcs[tcs.length - 1]; wSetCell(tgt, String(d.total), tgt); }
+  else if (!hasTot && hc) { const c = proto.cloneNode(true), tcs = kids(c, "tc"); tcs.forEach(tc => wSetCell(tc, "", tc)); wSetCell(tcs[0], "Total hours", tcs[0]); wSetCell(tcs[hc[0]], String(d.total), tcs[hc[0]]); const lastRow = kids(tbl, "tr").pop(); tbl.insertBefore(c, lastRow.nextSibling); }
+  // fields it found nowhere: one line right above the dates table
+  const miss = CV_FIELDS.filter(([k]) => !(plan.fields[k] || []).length && (k !== "agency" || d.agency) && (k !== "total" || (!totalTr && !hc)));
+  if (miss.length) { const p = doc.createElementNS(W_NS, "w:p"); tbl.parentNode.insertBefore(p, tbl); wReplace(p, 0, 0, miss.map(([k, l]) => l + ": " + cvVal(d, k)).join("     ")); }
+  M.parts.forEach(pt => M.zip.file(pt.n, new XMLSerializer().serializeToString(pt.doc)));
+  return await M.zip.generateAsync({ type: "uint8array", compression: "DEFLATE", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+}
+
+/* ================= Excel (.xlsx) ================= */
+const colN = s => s.split("").reduce((a, c) => a * 26 + c.charCodeAt(0) - 64, 0);
+const colL = n => { let s = ""; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; };
+const refRC = ref => { const m = /^([A-Z]+)(\d+)$/.exec(ref); return m ? [Number(m[2]), colN(m[1])] : null; };
+async function xlsxModel(u8) {
+  const zip = await JSZip.loadAsync(u8);
+  const wb = new DOMParser().parseFromString(await zip.file("xl/workbook.xml").async("string"), "application/xml");
+  const sh = wb.getElementsByTagNameNS(S_NS, "sheet")[0]; if (!sh) throw new Error("No sheet in this Excel file.");
+  const rid = sh.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id");
+  const rels = new DOMParser().parseFromString(await zip.file("xl/_rels/workbook.xml.rels").async("string"), "application/xml");
+  let target = [...rels.getElementsByTagName("Relationship")].find(r => r.getAttribute("Id") === rid).getAttribute("Target");
+  const path = target.startsWith("/") ? target.slice(1) : "xl/" + target.replace(/^\.\//, "");
+  const ss = []; if (zip.file("xl/sharedStrings.xml")) { const sd = new DOMParser().parseFromString(await zip.file("xl/sharedStrings.xml").async("string"), "application/xml"); [...sd.getElementsByTagNameNS(S_NS, "si")].forEach(si => ss.push([...si.getElementsByTagNameNS(S_NS, "t")].map(t => t.textContent).join(""))); }
+  const doc = new DOMParser().parseFromString(await zip.file(path).async("string"), "application/xml");
+  const M = { kind: "xlsx", zip, wb, path, ss, doc, sheetName: sh.getAttribute("name") };
+  xIndex(M); return M;
+}
+function xIndex(M) {
+  const cells = {}, merges = [];
+  [...M.doc.getElementsByTagNameNS(S_NS, "c")].forEach(c => cells[c.getAttribute("r")] = c);
+  [...M.doc.getElementsByTagNameNS(S_NS, "mergeCell")].forEach(m => { const [a, b] = m.getAttribute("ref").split(":"); const A = refRC(a), B = refRC(b || a); merges.push({ r1: A[0], c1: A[1], r2: B[0], c2: B[1], el: m }); });
+  M.cells = cells; M.merges = merges;
+  M.text = ref => { const c = cells[ref]; if (!c) return ""; const t = c.getAttribute("t"); const v = c.getElementsByTagNameNS(S_NS, "v")[0];
+    if (t === "s") return M.ss[Number(v && v.textContent)] || ""; if (t === "inlineStr") return [...c.getElementsByTagNameNS(S_NS, "t")].map(x => x.textContent).join(""); return v ? v.textContent : ""; };
+  M.spots = Object.keys(cells).map(r => ({ id: r, text: M.text(r).trim(), rc: refRC(r) })).filter(x => x.text).sort((a, b) => a.rc[0] - b.rc[0] || a.rc[1] - b.rc[1]);
+  const byRow = {}; M.spots.forEach(s => (byRow[s.rc[0]] = byRow[s.rc[0]] || []).push(s));
+  M.rows = Object.keys(byRow).map(Number).sort((a, b) => a - b).filter(r => byRow[r].length >= 2).map(r => ({ id: "r" + r, r, text: byRow[r].map(s => s.text).join(" | "), cells: byRow[r] }));
+  M.maxRow = Math.max(0, ...Object.keys(cells).map(r => refRC(r)[0]));
+}
+const xMergeAt = (M, r, c) => M.merges.find(m => r >= m.r1 && r <= m.r2 && c >= m.c1 && c <= m.c2);
+function xTarget(M, sp) { // where the value next to a label goes
+  const [r, c] = sp.rc, mg = xMergeAt(M, r, c), c2 = mg ? mg.c2 : c;
+  for (let k = c2 + 1; k <= c2 + 4; k++) { const ref = colL(k) + r; if (M.text(ref).trim() === "" || /^_+$/.test(M.text(ref).trim())) { const m2 = xMergeAt(M, r, k); if (!m2 || (m2.r1 === r && m2.c1 === k)) return { ref }; } else break; }
+  const below = colL(c) + (mg ? mg.r2 + 1 : r + 1); if (!M.text(below).trim() && !fieldOf(M.text(below))) return { ref: below };
+  return { ref: sp.id, inCell: true };
+}
+function xlsxPlan(M, mapping) {
+  mapping = mapping || {}; const plan = { fields: {}, table: null };
+  M.spots.forEach(sp => { PH.lastIndex = 0; let m; while ((m = PH.exec(sp.text))) { const k = m[1].toLowerCase(); if (CV_FIELDS.some(f => f[0] === k)) (plan.fields[k] = plan.fields[k] || []).push({ how: "ph", sp }); } });
+  M.spots.forEach(sp => { if (/\{\{/.test(sp.text)) return; const lab = sp.text.split(":")[0].replace(/[_\s]+$/, ""); const f = fieldOf(lab); if (!f) return;
+    if (sp.text.includes(":") && sp.text.split(":").slice(1).join(":").replace(/[_\s]/g, "") !== "") return; // already filled in
+    (plan.fields[f] = plan.fields[f] || []).push({ how: "label", sp, label: sp.text, ...xTarget(M, sp) }); });
+  CV_FIELDS.forEach(([k]) => { const v = (mapping.fields || {})[k]; if (!v || v === "auto") return; if (v === "none") { plan.fields[k] = []; return; }
+    const rc = refRC(v); if (!rc) return; const sp = M.spots.find(x => x.id === v) || { id: v, text: "", rc };
+    plan.fields[k] = [sp.text ? { how: "label", sp, label: sp.text, hand: true, ...xTarget(M, sp) } : { how: "label", sp, label: v, hand: true, ref: v }]; });
+  const pick = cells => { const cols = {}; cells.forEach(s => { const ro = roleOf(s.text); if (ro && !Object.values(cols).includes(ro)) cols[s.rc[1]] = ro; }); return cols; };
+  const tm = M.rows.find(r => r.cells.some(s => /\{\{\s*(date|hours|start|time)\s*\}\}/i.test(s.text)));
+  if (tm) { const cols = {}; tm.cells.forEach(s => { const m = /\{\{\s*([a-z]+)\s*\}\}/i.exec(s.text); if (m && ROW_KEYS.includes(m[1].toLowerCase())) cols[s.rc[1]] = m[1].toLowerCase(); }); plan.table = { r: tm.r, tmpl: true, cols, label: "row with {{date}}" }; }
+  else {
+    const hand = mapping.table && mapping.table !== "auto" && mapping.table !== "none" ? M.rows.find(r => r.id === mapping.table) : null;
+    const cand = hand ? [hand] : M.rows.filter(r => { const v = Object.values(pick(r.cells)); return v.length >= 2 && (v.includes("date") || (v.includes("hours") && (v.includes("start") || v.includes("time")))); });
+    if (cand[0]) plan.table = { r: cand[0].r, cols: pick(cand[0].cells), label: cand[0].text, hand: !!hand };
+  }
+  if (mapping.table === "none") plan.table = null;
+  if (plan.table) plan.fields.total = (plan.fields.total || []).filter(x => x.hand || x.how === "ph" || x.sp.rc[0] <= plan.table.r);
+  return plan;
+}
+function xRow(M, r, make) {
+  const sd = M.doc.getElementsByTagNameNS(S_NS, "sheetData")[0];
+  let row = [...sd.childNodes].find(x => x.nodeType === 1 && Number(x.getAttribute("r")) === r); if (row || !make) return row;
+  row = M.doc.createElementNS(S_NS, "row"); row.setAttribute("r", r);
+  const after = [...sd.childNodes].find(x => x.nodeType === 1 && Number(x.getAttribute("r")) > r); sd.insertBefore(row, after || null); return row;
+}
+function xSet(M, ref, val, styleRef) {
+  const [r, c] = refRC(ref); const row = xRow(M, r, true); row.removeAttribute("spans");
+  let cell = M.cells[ref];
+  if (!cell) { cell = M.doc.createElementNS(S_NS, "c"); cell.setAttribute("r", ref); const after = [...row.childNodes].find(x => x.nodeType === 1 && x.getAttribute("r") && refRC(x.getAttribute("r"))[1] > c); row.insertBefore(cell, after || null); M.cells[ref] = cell;
+    const st = styleRef && M.cells[styleRef] && M.cells[styleRef].getAttribute("s"); if (st) cell.setAttribute("s", st); }
+  while (cell.firstChild) cell.removeChild(cell.firstChild);
+  if (val === "" || val == null) { cell.removeAttribute("t"); return; }
+  if (typeof val === "number") { cell.removeAttribute("t"); const v = M.doc.createElementNS(S_NS, "v"); v.textContent = String(val); cell.appendChild(v); return; }
+  cell.setAttribute("t", "inlineStr"); const is = M.doc.createElementNS(S_NS, "is"), t = M.doc.createElementNS(S_NS, "t"); t.setAttributeNS(XML_NS, "xml:space", "preserve"); t.textContent = String(val); is.appendChild(t); cell.appendChild(is);
+}
+function xShift(M, from, n) { // insert n empty rows at row `from` (rows from..end move down)
+  const sh = ref => ref.replace(/(\$?[A-Z]{1,3})(\$?)(\d+)/g, (all, c, d, r) => Number(r) >= from ? c + d + (Number(r) + n) : all);
+  const sd = M.doc.getElementsByTagNameNS(S_NS, "sheetData")[0];
+  [...sd.childNodes].filter(x => x.nodeType === 1).reverse().forEach(row => { const r = Number(row.getAttribute("r")); if (r < from) return; row.setAttribute("r", r + n); row.removeAttribute("spans");
+    [...row.childNodes].filter(x => x.nodeType === 1).forEach(c => c.setAttribute("r", c.getAttribute("r").replace(/\d+$/, String(r + n)))); });
+  [...M.doc.getElementsByTagNameNS(S_NS, "f")].forEach(f => { f.textContent = sh(f.textContent); if (f.getAttribute("ref")) f.setAttribute("ref", sh(f.getAttribute("ref"))); });
+  M.merges.forEach(m => m.el.setAttribute("ref", sh(m.el.getAttribute("ref"))));
+  ["conditionalFormatting", "dataValidation", "hyperlink"].forEach(tag => [...M.doc.getElementsByTagNameNS(S_NS, tag)].forEach(e => ["sqref", "ref"].forEach(a => e.getAttribute(a) && e.setAttribute(a, sh(e.getAttribute(a))))));
+  xIndex(M);
+}
+async function xlsxFill(M, plan, d) {
+  const CV = (k) => k === "total" ? d.total : cvVal(d, k);
+  // placeholders (single fields)
+  M.spots.forEach(sp => { if (!/\{\{/.test(sp.text)) return; let anyRow = false; const s = sp.text.replace(PH, (all, k) => { k = k.toLowerCase(); if (ROW_KEYS.includes(k)) { anyRow = true; return all; } return k === "today" ? d.today : CV_FIELDS.some(f => f[0] === k) ? cvVal(d, k) : all; }); if (!anyRow && s !== sp.text) xSet(M, sp.id, s.trim() === String(d.total) ? d.total : s); });
+  CV_FIELDS.forEach(([k]) => (plan.fields[k] || []).forEach(x => { if (x.how !== "label") return;
+    if (x.inCell) xSet(M, x.ref, x.sp.text.split(":")[0].replace(/[_\s]+$/, "") + ": " + cvVal(d, k)); else xSet(M, x.ref, CV(k), x.ref); }));
+  let t = plan.table; const missing = CV_FIELDS.filter(([k]) => !(plan.fields[k] || []).length && (k !== "agency" || d.agency));
+  let addAt = M.maxRow + 2;
+  if (!t) { // no table in the form: write one below everything
+    const hdr = ["Date", "Day", "Start", "End", "Hours", "What was done"], roles = ["date", "day", "start", "end", "hours", "done"];
+    hdr.forEach((h, i) => xSet(M, colL(i + 1) + addAt, h));
+    t = plan.table = { r: addAt, cols: Object.fromEntries(roles.map((ro, i) => [i + 1, ro])), added: true };
+  }
+  const cols = t.cols, hc = Object.entries(cols).find(e => e[1] === "hours");
+  let start = t.tmpl ? t.r : t.r + 1, totalR = null, avail = [];
+  const lastCol = Math.max(...Object.keys(cols).map(Number), 1);
+  for (let r = start; r <= M.maxRow; r++) { const txts = []; for (let c = 1; c <= lastCol + 2; c++) txts.push(M.text(colL(c) + r)); if (txts.some(x => /^total/i.test(x.trim()))) { totalR = r; break; }
+    if (Object.keys(cols).every(c => !M.text(colL(c) + r).trim() || /\{\{/.test(M.text(colL(c) + r)))) avail.push(r); else if (avail.length) break; }
+  if (!totalR) { avail = avail.filter((r, i) => r === start + i); let r = avail.length ? avail[avail.length - 1] + 1 : start; while (avail.length < d.rows.length) avail.push(r++); }
+  else if (avail.length < d.rows.length) { const need = d.rows.length - avail.length, at = totalR; const proto = avail.length ? avail[avail.length - 1] : start; xShift(M, at, need); for (let i = 0; i < need; i++) { avail.push(at + i); Object.keys(cols).forEach(c => xSet(M, colL(c) + (at + i), "", colL(c) + proto)); } totalR += need; }
+  const proto = avail[0];
+  avail.forEach((r, i) => { const row = d.rows[i]; Object.entries(cols).forEach(([c, ro]) => xSet(M, colL(c) + r, row ? (ro === "hours" ? row.hours : String(row[ro])) : "", colL(c) + proto)); });
+  if (totalR && hc) xSet(M, colL(hc[0]) + totalR, d.total, colL(hc[0]) + totalR);
+  else if (hc && !(plan.fields.total || []).length) { const r = Math.max(...avail, t.r) + 1; const c0 = Math.min(...Object.keys(cols).map(Number)); xSet(M, colL(c0) + r, "Total hours", colL(c0) + t.r); xSet(M, colL(hc[0]) + r, d.total); }
+  const miss = missing.filter(([k]) => k !== "total" || !hc);
+
+  if (miss.length) { let r = Math.max(M.maxRow, ...avail) + 2; miss.forEach(([k, l]) => { xSet(M, "A" + r, l); xSet(M, "B" + r, k === "total" ? d.total : cvVal(d, k)); r++; }); }
+  // dimension, calc chain (formulas recalc when opened)
+  const dim = M.doc.getElementsByTagNameNS(S_NS, "dimension")[0]; xIndex(M);
+  if (dim) { const mc = Math.max(1, ...Object.keys(M.cells).map(r => refRC(r)[1])); dim.setAttribute("ref", "A1:" + colL(mc) + M.maxRow); }
+  if (M.zip.file("xl/calcChain.xml")) { M.zip.remove("xl/calcChain.xml");
+    const ct = await M.zip.file("[Content_Types].xml").async("string"); M.zip.file("[Content_Types].xml", ct.replace(/<Override[^>]*calcChain[^>]*\/>/g, ""));
+    const rl = await M.zip.file("xl/_rels/workbook.xml.rels").async("string"); M.zip.file("xl/_rels/workbook.xml.rels", rl.replace(/<Relationship[^>]*calcChain[^>]*\/>/g, "")); }
+  let cp = M.wb.getElementsByTagNameNS(S_NS, "calcPr")[0]; if (!cp) { cp = M.wb.createElementNS(S_NS, "calcPr"); M.wb.documentElement.appendChild(cp); } cp.setAttribute("fullCalcOnLoad", "1");
+  M.zip.file("xl/workbook.xml", new XMLSerializer().serializeToString(M.wb));
+  M.zip.file(M.path, new XMLSerializer().serializeToString(M.doc));
+  return await M.zip.generateAsync({ type: "uint8array", compression: "DEFLATE", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+
+/* ---- the plain sheet used when an agency has no sheet uploaded (a small Word file made here) ---- */
+async function defaultDocx() {
+  const z = new JSZip();
+  z.file("[Content_Types].xml", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+  z.file("_rels/.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+  const P = (t, o = {}) => '<w:p><w:pPr>' + (o.sp ? '<w:spacing w:after="' + o.sp + '"/>' : "") + (o.c ? '<w:jc w:val="center"/>' : "") + '</w:pPr><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/>' + (o.b ? "<w:b/>" : "") + '<w:sz w:val="' + (o.sz || 22) + '"/></w:rPr><w:t xml:space="preserve">' + t + "</w:t></w:r></w:p>";
+  const C = (t, w, b) => '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/></w:tcPr>' + P(t, { b }) + "</w:tc>";
+  const ws = [1300, 800, 1300, 1300, 800, 3900];
+  const row = (vals, b) => "<w:tr>" + vals.map((v, i) => C(v, ws[i], b)).join("") + "</w:tr>";
+  const bd = ["top", "left", "bottom", "right", "insideH", "insideV"].map(e => '<w:' + e + ' w:val="single" w:sz="4" w:color="000000"/>').join("");
+  z.file("word/document.xml", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="' + W_NS + '"><w:body>' +
+    P("BILLING COVER SHEET", { b: 1, sz: 32, c: 1, sp: 240 }) + P("Agency: {{agency}}") + P("Client name: {{name}}") + P("Medicaid #: {{medicaid}}") + P("Month: {{month}}", { sp: 240 }) +
+    '<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders>' + bd + '</w:tblBorders></w:tblPr><w:tblGrid>' + ws.map(w => '<w:gridCol w:w="' + w + '"/>').join("") + "</w:tblGrid>" +
+    row(["Date", "Day", "Start", "End", "Hours", "What was done"], 1) + row(["{{date}}", "{{day}}", "{{start}}", "{{end}}", "{{hours}}", "{{done}}"]) + row(["Total hours", "", "", "", "{{total}}", ""], 1) + "</w:tbl>" +
+    P("", { sp: 480 }) + P("Signature: ______________________________          Date: ______________") +
+    '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>');
+  return await z.generateAsync({ type: "uint8array" });
+}
+
+/* ---- server: sheets list, one sheet ---- */
+let sheetsMeta = {};
+async function loadSheets() { const r = await api("sheets"); sheetsMeta = {}; if (r.status === 200) (r.data.sheets || []).forEach(s => sheetsMeta[s.agency_key] = s); return sheetsMeta; }
+const sheetCache = {};
+async function getSheet(ak) { const m = sheetsMeta[ak]; if (!m) return null; const c = sheetCache[ak]; if (c && c.updated_at === m.updated_at) return c;
+  const r = await api("sheets/" + encodeURIComponent(ak)); if (r.status !== 200) throw new Error("Could not load the sheet."); const s = r.data.sheet; s.u8 = b64.dec(s.data); delete s.data; s.mapping = s.mapping ? JSON.parse(s.mapping) : {}; sheetCache[ak] = s; return s; }
+const libsReady = () => loadLib("jszip", () => window.JSZip);
+async function modelOf(kind, u8) { await libsReady(); return kind === "xlsx" ? xlsxModel(u8) : docxModel(u8); }
+const planOf = (M, mp) => M.kind === "xlsx" ? xlsxPlan(M, mp) : docxPlan(M, mp);
+
+/* ---- Agency cover sheets dialog (Clients tab) ---- */
+async function openSheets() {
+  $("shErr").textContent = ""; $("shList").innerHTML = '<li class="empty">Loading…</li>'; $("sheetsDlg").showModal();
+  await loadClients(); await loadSheets(); renderSheets();
+}
+function renderSheets() {
+  const ags = agencies();
+  $("shList").innerHTML = ags.map(a => { const s = sheetsMeta[nkey(a)];
+    return '<li class="shrow"><div><div class="nm">' + esc(a) + '</div><div class="meta">' + (s ? esc(s.filename) + " · " + (s.kind === "xlsx" ? "Excel" : "Word") + " · " + Math.max(1, Math.round(s.size / 1024)) + " KB" : "No sheet yet (a plain cover sheet is used)") + "</div></div>" +
+      '<div class="shbtns"><button class="btn" data-up="' + esc(a) + '">' + (s ? "Replace" : "Upload") + "</button>" + (s ? '<button class="btn" data-map="' + esc(a) + '">Check spots</button><button class="btn danger" data-rm="' + esc(a) + '" aria-label="Remove">Remove</button>' : "") + "</div></li>"; }).join("");
+}
+let shFor = null;
+async function sheetUpload(file) {
+  const a = shFor; if (!a || !file) return;
+  const kind = /\.xlsx$/i.test(file.name) ? "xlsx" : /\.docx$/i.test(file.name) ? "docx" : "";
+  if (!kind) return ($("shErr").textContent = /\.(doc|xls)$/i.test(file.name) ? "This is an old Word/Excel file (.doc / .xls). Open it and \"Save as\" .docx or .xlsx, then upload that." : "Please pick a Word (.docx) or Excel (.xlsx) file.");
+  if (file.size > 3 * 1024 * 1024) return ($("shErr").textContent = "This file is bigger than 3 MB. Please use a smaller copy.");
+  $("shErr").textContent = "Reading " + file.name + "…";
+  const u8 = new Uint8Array(await file.arrayBuffer());
+  try { const M = await modelOf(kind, u8); planOf(M, {}); } catch (e) { return ($("shErr").textContent = "Could not read this file: " + (e.message || e)); }
+  const r = await api("sheets/" + encodeURIComponent(nkey(a)), { method: "PUT", body: JSON.stringify({ agency: a, filename: file.name, kind, data: b64.enc(u8), mapping: {} }) });
+  if (r.status !== 200) return ($("shErr").textContent = (r.data && r.data.error) || "Could not save. Try again.");
+  $("shErr").textContent = ""; toast("Saved " + a + "'s sheet"); await loadSheets(); renderSheets(); openMap(a);
+}
+/* ---- "Check spots": what goes where, change by hand ---- */
+let mapCtx = null;
+async function openMap(a) {
+  const ak = nkey(a); $("mapTitle").textContent = a + ": where things go"; $("mapBody").innerHTML = '<p class="sub">Reading the sheet…</p>'; $("mapErr").textContent = ""; if (!$("mapDlg").open) $("mapDlg").showModal();
+  try { const s = await getSheet(ak); const M = await modelOf(s.kind, s.u8.slice()); mapCtx = { a, ak, s, M }; renderMap(); } catch (e) { $("mapBody").innerHTML = ""; $("mapErr").textContent = "Could not read the sheet: " + (e.message || e); }
+}
+function renderMap() {
+  const { s, M } = mapCtx, mp = s.mapping || {}, plan = planOf(M, mp);
+  const cut = t => t.length > 60 ? t.slice(0, 58) + "…" : t;
+  const spotName = sp => (M.kind === "xlsx" ? sp.id + ": " : "") + cut(sp.text);
+  const descr = (k) => { const x = (plan.fields[k] || [])[0]; if (!x) return '<span class="miss">Not found: it is written above the dates table</span>';
+    if (x.how === "ph") return "Found {{" + k + "}}"; return "Next to “" + esc(cut(x.label || "")) + "”" + (x.ref && !x.inCell ? " (cell " + x.ref + ")" : ""); };
+  const opts = (k) => '<option value="auto">Find it by itself</option><option value="none"' + ((mp.fields || {})[k] === "none" ? " selected" : "") + ">Leave it out</option>" +
+    M.spots.filter(sp => sp.text.length <= 120).map(sp => '<option value="' + esc(sp.id) + '"' + ((mp.fields || {})[k] === sp.id ? " selected" : "") + ">Next to: " + esc(spotName(sp)) + "</option>").join("");
+  const tdesc = plan.table ? (plan.table.tmpl ? "Found the {{date}} row" : "Header “" + esc(cut(plan.table.label || "")) + "”") + '<div class="cols">' + Object.entries(plan.table.cols).map(([c, ro]) => "<b>" + esc(CV_ROLES[ro]) + "</b>").join(" · ") + "</div>" : '<span class="miss">No dates table found: a new table is added at the end</span>';
+  $("mapBody").innerHTML = '<p class="sub">From <b>' + esc(s.filename) + "</b>. If a spot is wrong, pick the label it should go next to.</p>" +
+    CV_FIELDS.map(([k, l]) => '<div class="mrow"><label for="mp_' + k + '">' + l + '</label><div class="mfound">' + descr(k) + '</div><select class="f sel" id="mp_' + k + '">' + opts(k) + "</select></div>").join("") +
+    '<div class="mrow"><label for="mp_table">Dates table</label><div class="mfound">' + tdesc + '</div><select class="f sel" id="mp_table"><option value="auto">Find it by itself</option><option value="none"' + (mp.table === "none" ? " selected" : "") + ">Add a new table at the end</option>" +
+    M.rows.map(r => '<option value="' + esc(r.id) + '"' + (mp.table === r.id ? " selected" : "") + ">Header row: " + esc(cut(r.text)) + "</option>").join("") + "</select></div>";
+  $("mapBody").querySelectorAll("select").forEach(sel => sel.onchange = () => { const m = mapCtx.s.mapping = mapCtx.s.mapping || {}; m.fields = m.fields || {}; if (sel.id === "mp_table") m.table = sel.value; else m.fields[sel.id.slice(3)] = sel.value; renderMap(); });
+}
+async function saveMap() {
+  const { ak, s } = mapCtx; const r = await api("sheets/" + encodeURIComponent(ak), { method: "PUT", body: JSON.stringify({ mapping: s.mapping || {} }) });
+  if (r.status !== 200) return ($("mapErr").textContent = "Could not save. Try again.");
+  await loadSheets(); s.updated_at = sheetsMeta[ak] && sheetsMeta[ak].updated_at; sheetCache[ak] = s; $("mapDlg").close(); toast("Saved"); if ($("sheetsDlg").open) renderSheets();
+}
+
+/* ---- Billing cover sheet for one client + month ---- */
+let cov = null;
+async function openCover(ck, y, m) {
+  cov = { ck, y, m }; $("covErr").textContent = ""; $("covPrev").innerHTML = ""; $("covInfo").innerHTML = '<p class="sub">Getting it ready…</p>';
+  if (!$("coverDlg").open) $("coverDlg").showModal();
+  await buildCover();
+}
+async function buildCover() {
+  const { ck, y, m } = cov; const c = clients[ck] || {};
+  $("covMonth").textContent = MONTHS[m] + " " + y; $("covName").textContent = c.name || "";
+  try {
+    await Promise.all([loadSheets(), libsReady()]);
+    const d = await coverData(ck, y, m); const ak = c.agency ? nkey(c.agency) : "";
+    const s = ak && sheetsMeta[ak] ? await getSheet(ak) : null;
+    const kind = s ? s.kind : "docx", u8 = s ? s.u8.slice() : await defaultDocx();
+    const M = await modelOf(kind, u8), plan = planOf(M, s ? s.mapping : {});
+    const out = kind === "xlsx" ? await xlsxFill(M, plan, d) : await docxFill(M, plan, d);
+    cov.out = out; cov.kind = kind; cov.d = d;
+    cov.file = (d.name + " - " + (d.agency || "cover sheet") + " - " + d.month).replace(/[\\/:*?"<>|,]+/g, " ").replace(/\s+/g, " ").trim() + "." + kind;
+    $("covInfo").innerHTML = '<div class="covgrid"><span>Agency</span><b>' + esc(d.agency || "No agency") + '</b><span>Medicaid #</span><b>' + (d.medicaid ? esc(d.medicaid) : '<span class="miss">not filled in</span>') + "</b><span>Bookings</span><b>" + d.rows.length + "</b><span>Total hours</span><b>" + fmtH(d.total) + "</b></div>" +
+      '<p class="sub">' + (s ? "Filled into " + esc(d.agency) + "'s sheet: " + esc(s.filename) : d.agency ? "No sheet uploaded for " + esc(d.agency) + " yet, so this is the plain cover sheet. Upload theirs under Clients → Agency cover sheets." : "This client has no agency, so this is the plain cover sheet.") + "</p>" +
+      (!d.medicaid ? '<p class="miss" style="margin:4px 0 0">Add the Medicaid # in the client’s details.</p>' : "");
+    $("covDl").textContent = "Download " + (kind === "xlsx" ? "Excel" : "Word") + " file";
+    await renderCoverPreview($("covPrev"));
+  } catch (e) { $("covInfo").innerHTML = ""; $("covErr").textContent = "Could not make the cover sheet: " + (e.message || e); console.error(e); }
+}
+async function renderCoverPreview(box) {
+  box.innerHTML = "";
+  if (cov.kind === "docx") { await loadLib("docxprev", () => window.docx && window.docx.renderAsync); await window.docx.renderAsync(new Blob([cov.out]), box, null, { inWrapper: false, ignoreWidth: false, breakPages: true, experimental: true }); }
+  else { await loadLib("xlsx", () => window.XLSX); const wb = XLSX.read(cov.out, { type: "array" }); box.innerHTML = '<div class="xprev">' + XLSX.utils.sheet_to_html(wb.Sheets[wb.SheetNames[0]], { header: "", footer: "" }) + "</div>"; }
+}
+function covDownload() {
+  const blob = new Blob([cov.out], { type: cov.kind === "xlsx" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = cov.file; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+}
+async function covPrint() {
+  const pa = $("printArea"); await renderCoverPreview(pa);
+  document.body.classList.add("printcover"); $("coverDlg").close();
+  const done = () => { document.body.classList.remove("printcover"); pa.innerHTML = ""; window.removeEventListener("afterprint", done); if (cov) $("coverDlg").showModal(); };
+  window.addEventListener("afterprint", done); setTimeout(() => window.print(), 300);
+}
+$("sheetsBtn").onclick = openSheets;
+$("shClose").onclick = () => $("sheetsDlg").close();
+$("shList").addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.up) { shFor = b.dataset.up; $("sheetFile").value = ""; $("sheetFile").click(); }
+  if (b.dataset.map) openMap(b.dataset.map);
+  if (b.dataset.rm && confirm("Remove " + b.dataset.rm + "'s cover sheet? (A plain cover sheet is used until you upload a new one.)")) { await api("sheets/" + encodeURIComponent(nkey(b.dataset.rm)), { method: "DELETE" }); await loadSheets(); renderSheets(); toast("Removed"); }
+});
+$("sheetFile").addEventListener("change", () => sheetUpload($("sheetFile").files[0]));
+$("mapCancel").onclick = () => $("mapDlg").close();
+$("mapSave").onclick = saveMap;
+$("covClose").onclick = () => { cov = null; $("coverDlg").close(); };
+$("covPrevM").onclick = () => { const d = new Date(cov.y, cov.m - 1, 1); cov.y = d.getFullYear(); cov.m = d.getMonth(); buildCover(); };
+$("covNextM").onclick = () => { const d = new Date(cov.y, cov.m + 1, 1); cov.y = d.getFullYear(); cov.m = d.getMonth(); buildCover(); };
+$("covDl").onclick = () => cov && cov.out && covDownload();
+$("covPrint").onclick = () => cov && cov.out && covPrint();
+$("cCover").onclick = () => { if (!editingCli) return; const ck = editingCli.name_key; $("cliDlg").close(); const t = new Date(); openCover(ck, t.getFullYear(), t.getMonth()); };
+$("rep").addEventListener("click", e => { const b = e.target.closest("[data-cover]"); if (b) openCover(b.dataset.cover, tView.getFullYear(), tView.getMonth()); });
 </script>
 </body>
 </html>
