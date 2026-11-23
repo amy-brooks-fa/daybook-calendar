@@ -1783,7 +1783,7 @@ async function pdfFill(M, plan, d) {
       const js = fmtJS(f); if (/AFDate_Format(Ex)?\("m\/d\//.test(js)) v = v.replace(/^0(\d)\//, "$1/").replace(/\/0(\d)\//, "/$1/");
       tf.setText(v); if (v && /AFNumber_Format\([^)]*\\u0024|AFNumber_Format\([^)]*\$/.test(js)) money.push([tf, v]);
       // letter size: the sheet's own, or (when it says "auto") 10 pt; smaller when the words are too long for the box (not below 6 pt)
-      const da = /([\d.]+)\s+Tf/.exec(tf.acroField.getDefaultAppearance() || ""), z0 = da && Number(da[1]) || Math.min(10, Math.max(6, f.h - 5));
+      const da = /([\d.]+)\s+Tf/.exec(tf.acroField.getDefaultAppearance() || ""), z0 = da && Number(da[1]) || Math.min(12, Math.max(6, Math.round(f.h * 0.6 * 2) / 2));
       let z = z0; while (v && z > 6 && font.widthOfTextAtSize(v, z) > f.w - 4) z -= 0.5; tf.setFontSize(z); } catch (e) { console.warn(e); } };
     const was = f => { try { return form.getTextField(f.name).getText() || ""; } catch (e) { return ""; } };
     // Round 14: the sheet stays as it was. Name / Medicaid # / agency are kept when the sheet already has them
