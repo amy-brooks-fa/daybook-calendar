@@ -1673,7 +1673,8 @@ function renderMap() {
   const { s, M } = mapCtx, mp = s.mapping || {}, plan = planOf(M, mp);
   const cut = t => t.length > 60 ? t.slice(0, 58) + "…" : t;
   const spotName = sp => (M.kind === "xlsx" ? sp.id + ": " : "") + cut(sp.text);
-  const descr = (k) => { const x = (plan.fields[k] || [])[0]; if (!x) return '<span class="miss">Not found: it is written above the dates table</span>';
+  const descr = (k) => { const x = (plan.fields[k] || [])[0]; if (!x && k === "total" && plan.table && Object.values(plan.table.cols).includes("hours")) return "In the dates table (its Total row, or a new one)";
+    if (!x) return '<span class="miss">Not found: it is written ' + (plan.table ? "above the dates table" : "at the end") + "</span>";
     if (x.how === "ph") return "Found {{" + k + "}}"; return "Next to “" + esc(cut(x.label || "")) + "”" + (x.ref && !x.inCell ? " (cell " + x.ref + ")" : ""); };
   const opts = (k) => '<option value="auto">Find it by itself</option><option value="none"' + ((mp.fields || {})[k] === "none" ? " selected" : "") + ">Leave it out</option>" +
     M.spots.filter(sp => sp.text.length <= 120).map(sp => '<option value="' + esc(sp.id) + '"' + ((mp.fields || {})[k] === sp.id ? " selected" : "") + ">Next to: " + esc(spotName(sp)) + "</option>").join("");
@@ -1718,7 +1719,8 @@ async function buildCover() {
 }
 async function renderCoverPreview(box) {
   box.innerHTML = "";
-  if (cov.kind === "docx") { await loadLib("docxprev", () => window.docx && window.docx.renderAsync); await window.docx.renderAsync(new Blob([cov.out]), box, null, { inWrapper: false, ignoreWidth: false, breakPages: true, experimental: true }); }
+  if (cov.kind === "docx") { await loadLib("docxprev", () => window.docx && window.docx.renderAsync); await window.docx.renderAsync(new Blob([cov.out]), box, null, { inWrapper: false, ignoreWidth: false, breakPages: true, experimental: true });
+    if (box.id === "covPrev") { const secs = [...box.querySelectorAll("section.docx")]; const w = secs[0] && secs[0].offsetWidth; if (w) { const z = Math.min(1, (box.clientWidth - 14) / w); secs.forEach(x => x.style.zoom = z); } } }
   else { await loadLib("xlsx", () => window.XLSX); const wb = XLSX.read(cov.out, { type: "array" }); box.innerHTML = '<div class="xprev">' + XLSX.utils.sheet_to_html(wb.Sheets[wb.SheetNames[0]], { header: "", footer: "" }) + "</div>"; }
 }
 function covDownload() {
