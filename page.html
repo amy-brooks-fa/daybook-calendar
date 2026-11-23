@@ -1369,7 +1369,7 @@ const ROLE_RX = [
 ];
 const normL = t => String(t || "").toLowerCase().replace(/['’]/g, " ").replace(/[^a-z0-9#\/ ]+/g, " ").replace(/#/g, " # ").replace(/\s+/g, " ").replace(/ # ?$/, "").replace(/ (no|number)$/, "").trim();
 const fieldOf = t => { const n = normL(t); if (!n || n.length > 40) return null; for (const [k, re] of FIELD_RX) if (re.test(n)) return k; return null; };
-const roleOf = t => { const n = normL(t); if (!n || n.length > 40) return null; for (const [k, re] of ROLE_RX) if (re.test(n)) return k; return null; };
+const roleOf = t => { let n = normL(t); if (!n) return null; if (n.length > 40) { n = n.split(" ").slice(0, 2).join(" "); if (!/^(service|activit|description|what|task|notes?|comments?)/.test(n)) return null; } for (const [k, re] of ROLE_RX) if (re.test(n)) return k; return null; };
 const PH = /\{\{\s*([a-zA-Z]+)\s*\}\}/g;
 const ROW_KEYS = ["date", "day", "start", "end", "time", "hours", "done"];
 const b64 = { enc: u8 => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); },
@@ -1671,7 +1671,7 @@ async function imageToPdf(u8, isPng) {
   const w = 612, h = Math.round(612 * img.height / img.width); const pg = doc.addPage([w, h]); pg.drawImage(img, { x: 0, y: 0, width: w, height: h });
   return await doc.save();
 }
-const fNameClean = n => String(n || "").split(".").pop().replace(/\[\d+\]/g, "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[_\-]+/g, " ").replace(/\d+/g, " ").replace(/\s+/g, " ").trim();
+const fNameClean = n => String(n || "").split(".").pop().replace(/\[\d+\]/g, "").replace(/[ _]?(Row|Line|Ln)[ _]?\d+$/i, "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[_\-]+/g, " ").replace(/\d+/g, " ").replace(/\s+/g, " ").trim();
 async function pdfModel(u8) {
   await pdfLibs();
   let doc; try { doc = await PDFLib.PDFDocument.load(u8, { ignoreEncryption: true, updateMetadata: false }); } catch (e) { throw new Error("This PDF can't be opened (it may be damaged or locked)."); }
@@ -1757,7 +1757,7 @@ function pdfFormPlan(M, mp) {
   PDF_ROLES.forEach(ro => { const v = handC[ro]; if (v && v !== "auto") plan.cols[ro] = v !== "none" && byId(v) ? byId(v) : null; });
   const cand = {}; // per column: the box with the most boxes under it wins (then the highest)
   M.fields.slice().sort(sortTop).forEach(f => { if (used.has(f.id)) return; for (const t of [fNameClean(f.name), f.tu, nearText(M, f, true)].filter(Boolean)) { const ro = roleOf(t); if (ro && plan.cols[ro] === undefined && !fieldOf(t)) { (cand[ro] = cand[ro] || []).push(f); break; } } });
-  Object.entries(cand).forEach(([ro, l]) => { let best = null, bn = 0; l.forEach(f => { const n = pdfColumn(M, f, used).length; if (n > bn) { bn = n; best = f; } }); if (best) plan.cols[ro] = best; });
+  Object.entries(cand).forEach(([ro, l]) => { let best = null, bn = 1; l.forEach(f => { const n = pdfColumn(M, f, used).length; if (n > bn) { bn = n; best = f; } }); if (best) plan.cols[ro] = best; }); // a lone box (like "Start-up/Support") is not a table column
   Object.entries(plan.cols).forEach(([ro, f]) => { if (!f) { delete plan.cols[ro]; return; } const s = pdfColumn(M, f, used); s.forEach(x => used.add(x.id)); plan.cols[ro] = s; plan.rows = Math.max(plan.rows, s.length); });
   Object.keys(plan.fields).forEach(k => { if (!plan.fields[k]) delete plan.fields[k]; });
   return plan;
@@ -1781,9 +1781,30 @@ async function pdfFill(M, plan, d) {
       // long text (like "what was done"): make the letters smaller so it fits the box (not below 6 pt)
       const da = /([\d.]+)\s+Tf/.exec(tf.acroField.getDefaultAppearance() || ""), z0 = da && Number(da[1]) || 10;
       if (v && font.widthOfTextAtSize(v, z0) > f.w - 4) { let z = z0; while (z > 6 && font.widthOfTextAtSize(v, z) > f.w - 4) z -= 0.5; tf.setFontSize(z); } } catch (e) { console.warn(e); } };
-    CV_FIELDS.forEach(([k]) => { if (plan.fields[k]) put(plan.fields[k], cvVal(d, k)); else if (k !== "agency" || d.agency) missing.push(k); });
+    const was = f => { try { return form.getTextField(f.name).getText() || ""; } catch (e) { return ""; } };
+    // Round 14: the sheet stays as it was. Name / Medicaid # / agency are kept when the sheet already has them
+    // (on an agency's shared sheet the name is changed to this client); month and total are written in the sheet's own style.
+    CV_FIELDS.forEach(([k]) => { const f = plan.fields[k];
+      if (!f) { if (!d.ownSheet && (k !== "agency" || d.agency)) missing.push(k); return; }
+      const old = was(f).trim(); let v = cvVal(d, k);
+      if ((k === "medicaid" || k === "agency") && (old || !v)) return;
+      if (k === "name" && old && (d.ownSheet || !v)) return;
+      if (k === "month" && /^\d{1,2}\s*\/\s*\d{4}$/.test(old)) v = String(d.m + 1).padStart(old.indexOf("/") > 1 ? 2 : 1, "0") + "/" + d.y;
+      if (k === "total" && /^\d+\.\d\d$/.test(old)) v = Number(d.total).toFixed(2);
+      put(f, v); });
+    // total payment = total hours x the hourly rate already on the sheet
+    { const fs = M.fields, rateF = fs.find(f => /rate/i.test(f.name) && !/\d$/.test(f.name)), payF = fs.find(f => /(payment|amount (due|requested)|total (due|amount|pay))/i.test(f.name) && !/\d$/.test(f.name));
+      const rate = rateF && parseFloat(was(rateF).replace(/[^0-9.]/g, ""));
+      if (payF && rate > 0) { const old = was(payF); put(payF, (/\$/.test(old) ? "$ " : "") + (Math.round(rate * d.total * 100) / 100).toFixed(2)); } }
     fit = plan.rows;
-    Object.entries(plan.cols).forEach(([ro, list]) => list.forEach((f, i) => put(f, d.rows[i] ? rowVal(d.rows[i], ro) : "")));
+    // each column written the way last month's sheet wrote it ("9:15am", "2.25")
+    const styleOf = list => { for (const f of list) { const t = was(f).trim(); if (t) return t; } return ""; };
+    const like = (ro, v, ex) => { if (!ex || !v) return v;
+      if ((ro === "start" || ro === "end") && /^\d{1,2}:\d\d\s?[ap]\.?m\.?$/i.test(ex)) { const m = /^(\d{1,2}:\d\d)\s*([AP])M$/i.exec(v.trim()); if (m) { const ap = /[ap]m/.test(ex) ? m[2].toLowerCase() + "m" : m[2].toUpperCase() + "M"; return m[1] + (/\d\s[ap]/i.test(ex) ? " " : "") + ap; } }
+      if (ro === "hours" && /^\d+\.\d\d$/.test(ex) && !isNaN(Number(v))) return Number(v).toFixed(2);
+      if (ro === "date" && /^\d{1,2}\/\d{1,2}\/\d{2}$/.test(ex)) return v.replace(/\/\d\d(\d\d)$/, "/$1");
+      return v; };
+    Object.entries(plan.cols).forEach(([ro, list]) => { const ex = styleOf(list); list.forEach((f, i) => put(f, d.rows[i] ? like(ro, rowVal(d.rows[i], ro), ex) : "")); });
     if (!Object.keys(plan.cols).length) fit = 0;
     try { form.updateFieldAppearances(font); } catch (e) { console.warn(e); }
   } else {
@@ -2039,9 +2060,9 @@ async function buildCover() {
     const s = useK ? await getSheet(useK) : null;
     const kind = s ? s.kind : "docx", u8 = s ? s.u8.slice() : await defaultDocx();
     const M = await modelOf(kind, u8), plan = planOf(M, s ? s.mapping : {});
-    const out = kind === "pdf" ? await pdfFill(M, plan, d) : kind === "xlsx" ? await xlsxFill(M, plan, d) : await docxFill(M, plan, d);
+    d.ownSheet = !!own; d.y = y; d.m = m; const out = kind === "pdf" ? await pdfFill(M, plan, d) : kind === "xlsx" ? await xlsxFill(M, plan, d) : await docxFill(M, plan, d);
     cov.out = out; cov.kind = kind; cov.d = d; cov.sheetKey = useK; cov.sheetLabel = own ? c.name : c.agency;
-    const notOn = kind === "pdf" ? (plan.mode === "form" ? CV_FIELDS.filter(([k]) => !plan.fields[k] && (k !== "agency" || d.agency)) : CV_FIELDS.filter(([k]) => !plan.spots[k] && (k !== "agency" || d.agency) && !(k === "total" && plan.rows && plan.rows.cols.hours))) : [];
+    const notOn = kind === "pdf" ? (plan.mode === "form" ? own ? [] : CV_FIELDS.filter(([k]) => !plan.fields[k] && (k !== "agency" || d.agency)) : CV_FIELDS.filter(([k]) => !plan.spots[k] && (k !== "agency" || d.agency) && !(k === "total" && plan.rows && plan.rows.cols.hours))) : [];
     const noRows = kind === "pdf" && (plan.mode === "form" ? !Object.keys(plan.cols).length : !(plan.rows && Object.keys(plan.rows.cols).length));
     cov.file = (d.name + " - " + (d.agency || "cover sheet") + " - " + d.month).replace(/[\\/:*?"<>|,]+/g, " ").replace(/\s+/g, " ").trim() + "." + kind;
     $("covInfo").innerHTML = '<div class="covgrid"><span>Agency</span><b>' + esc(d.agency || "No agency") + '</b><span>Medicaid #</span><b>' + (d.medicaid ? esc(d.medicaid) : '<span class="miss">not filled in</span>') + "</b><span>Bookings</span><b>" + d.rows.length + "</b><span>Total hours</span><b>" + fmtH(d.total) + "</b></div>" +
