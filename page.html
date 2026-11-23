@@ -1800,7 +1800,7 @@ async function pdfFill(M, plan, d) {
       fit = R.n || Math.max(1, Math.floor((R.y1 - 24) / h) + 1);
       for (let i = 0; i < fit; i++) { const yc = R.y1 - i * h, r = d.rows[i];
         Object.entries(R.cols).forEach(([ro, c]) => { const w = c.w || 60;
-          if (plan.white && (r || R.n)) box(pg, c.x + 1.5, yc, w - 3, Math.max(4, Math.min(h - 6, size * 1.7))); // leaves the table's lines alone
+          if (plan.white && (r || R.n)) box(pg, c.x - 1, yc, w, Math.max(4, Math.min(h - 6, size * 1.7))); // leaves the table's lines alone
           if (r) { const [t, z] = fitText(font, S(rowVal(r, ro)), w - 2, size, Math.min(size, 6)); pg.drawText(t, { x: c.x + 1, y: yc - z * 0.35, size: z, font, color: K }); } }); }
       // total hours under the last booking, if the sheet has no spot of its own for it and there is room
       if (!plan.spots.total && R.cols.hours && d.rows.length < fit) { const yc = R.y1 - d.rows.length * h, c0 = Object.values(R.cols).sort((a, b) => a.x - b.x)[0];
