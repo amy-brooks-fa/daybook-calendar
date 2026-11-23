@@ -167,6 +167,7 @@ table.bk tr.tot td{border-bottom:0;border-top:2px solid var(--ink);font-weight:7
 .done input{width:24px;height:24px;flex:none;accent-color:var(--accent);margin:0}
 .done label:has(input:checked){border-color:var(--accent);background:var(--accent-soft);font-weight:600}
 #fother{margin-top:8px}
+.dopt{display:grid;gap:6px}.done .det{height:46px;font-size:16px;margin-left:14px;width:calc(100% - 14px)}
 .btn.up{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:10px;border-style:dashed;border-color:#B9B1A3}
 .btn.up svg{width:20px;height:20px;flex:none}
 .uphint{font-size:14px;color:var(--muted);margin:8px 0 0}
@@ -434,12 +435,20 @@ let endAuto = true; // end time still follows the start time
    Anything typed in "+ Add another" and saved once shows as a choice next time on every phone/link: doneSaved = every item found in saved booking notes. */
 const DONE_OPTIONS = ["Looking for community classes", "Looking for a worker", "Helping worker with billing"];
 let doneSaved = [], doneAt = 0;
-const splitNote = n => (n || "").split(/\s*,\s*/).map(x => x.trim()).filter(Boolean);
+/* Round 11: note format "Choice: detail; Choice; Choice: detail". Old notes "A, B" (Round 10) still read.
+   Split on ";" if there is one; else a ":" means one choice with a detail (the detail may hold commas); else split on ",". */
+const cleanChoice = c => c.replace(/[;:,]/g, " ").replace(/\s+/g, " ").trim();
+function parseNote(n) {
+  n = (n || "").trim(); if (!n) return [];
+  const segs = n.includes(";") ? n.split(";") : n.includes(":") ? [n] : n.split(",");
+  return segs.map(x => { x = x.trim(); const i = x.indexOf(":"); return i >= 0 ? { c: x.slice(0, i).trim(), d: x.slice(i + 1).trim() } : { c: x, d: "" }; }).filter(x => x.c || x.d);
+}
+const noteOf = items => items.filter(x => x.c).map(x => cleanChoice(x.c) + (x.d ? ": " + x.d.replace(/;/g, ",").replace(/\s+/g, " ").trim() : "")).join("; ");
 async function loadDone() { // all items used in saved bookings (refreshed at most once a minute)
   if (Date.now() - doneAt < 60000) return false;
   const r = await api("entries?from=1900-01-01&to=2999-12-31"); if (r.status !== 200) return false;
   doneAt = Date.now(); const seen = new Set(DONE_OPTIONS.map(o => o.toLowerCase())), out = [];
-  (r.data.entries || []).forEach(e => splitNote(e.note).forEach(x => { if (x.length <= 80 && !seen.has(x.toLowerCase())) { seen.add(x.toLowerCase()); out.push(x); } }));
+  (r.data.entries || []).forEach(e => parseNote(e.note).map(p => cleanChoice(p.c)).filter(Boolean).forEach(x => { if (x.length <= 80 && !seen.has(x.toLowerCase())) { seen.add(x.toLowerCase()); out.push(x); } }));
   const changed = out.join("|") !== doneSaved.join("|"); doneSaved = out.sort((a, b) => a.localeCompare(b)); return changed;
 }
 /* Time lists (Round 10): 15-minute steps, values stay "HH:MM" 24h as before. Start list shows 7:00 AM-11:45 PM first, early morning at the bottom. */
@@ -464,18 +473,19 @@ function fillEnd(val) { // list after the start time, with the length beside eac
     list.map(m => tOpt(m, v, s != null && m > s ? s : null)).join("");
 }
 function fillDone(note) {
-  const opts = DONE_OPTIONS.concat(doneSaved), parts = splitNote(note), lc = opts.map(o => o.toLowerCase());
-  const on = new Set(), rest = [];
-  parts.forEach(x => { const i = lc.indexOf(x.toLowerCase()); i >= 0 ? on.add(i) : rest.push(x); });
-  $("fdone").innerHTML = opts.map((o, i) => '<label><input type="checkbox" value="' + esc(o) + '"' + (on.has(i) ? " checked" : "") + "> " + esc(o) + "</label>").join("") +
-    '<label><input type="checkbox" id="fotherOn"' + (rest.length ? " checked" : "") + "> + Add another (type it)</label>";
-  $("fother").value = rest.join(", "); $("fother").hidden = !rest.length;
+  const opts = DONE_OPTIONS.concat(doneSaved), lc = opts.map(o => o.toLowerCase()), on = {}, rest = [];
+  parseNote(note).forEach(x => { const i = lc.indexOf(cleanChoice(x.c).toLowerCase()); i >= 0 && !(i in on) ? on[i] = x.d : rest.push(x); });
+  $("fdone").innerHTML = opts.map((o, i) => '<div class="dopt"><label><input type="checkbox" value="' + esc(o) + '"' + (i in on ? " checked" : "") + "> " + esc(o) + "</label>" +
+      '<input class="f det" maxlength="120" autocomplete="off" placeholder="More details (optional)" value="' + esc(on[i] || "") + '"' + (i in on ? "" : " hidden") + "></div>").join("") +
+    '<div class="dopt"><label><input type="checkbox" id="fotherOn"' + (rest.length ? " checked" : "") + "> + Add another (type it)</label></div>";
+  $("fother").value = rest.map(x => x.c + (x.d ? ": " + x.d : "")).join("; "); $("fother").hidden = !rest.length;
   $("fotherOn").onchange = () => { $("fother").hidden = !$("fotherOn").checked; if (!$("fother").hidden) $("fother").focus(); };
+  $("fdone").querySelectorAll("input[value]").forEach(cb => cb.onchange = () => { const d = cb.closest(".dopt").querySelector(".det"); d.hidden = !cb.checked; });
 }
 function doneNote() {
-  const pick = [...$("fdone").querySelectorAll("input[value]:checked")].map(x => x.value);
-  if ($("fotherOn").checked && $("fother").value.trim()) pick.push($("fother").value.trim());
-  return pick.join(", ").slice(0, 300);
+  const items = [...$("fdone").querySelectorAll("input[value]:checked")].map(cb => ({ c: cb.value, d: cb.closest(".dopt").querySelector(".det").value.trim() }));
+  if ($("fotherOn").checked && $("fother").value.trim()) { $("fother").value.split(";").forEach(x => { x = x.trim(); const i = x.indexOf(":"); if (x) items.push(i >= 0 ? { c: x.slice(0, i), d: x.slice(i + 1).trim() } : { c: x, d: "" }); }); }
+  return noteOf(items).slice(0, 300);
 }
 
 async function api(path, opts = {}) {
