@@ -484,10 +484,10 @@ function fillDone(note) {
     '<div class="dopt"><label><input type="checkbox" id="fotherOn"' + (rest.length ? " checked" : "") + "> + Add another (type it)</label></div>";
   $("fother").value = rest.map(x => x.c + (x.d ? ": " + x.d : "")).join("; "); $("fother").hidden = !rest.length;
   $("fotherOn").onchange = () => { $("fother").hidden = !$("fotherOn").checked; if (!$("fother").hidden) $("fother").focus(); };
-  $("fdone").querySelectorAll("input[value]").forEach(cb => cb.onchange = () => { const d = cb.closest(".dopt").querySelector(".det"); d.hidden = !cb.checked; });
+  $("fdone").querySelectorAll("input[type=checkbox][value]").forEach(cb => cb.onchange = () => { const d = cb.closest(".dopt").querySelector(".det"); d.hidden = !cb.checked; });
 }
 function doneNote() {
-  const items = [...$("fdone").querySelectorAll("input[value]:checked")].map(cb => ({ c: cb.value, d: cb.closest(".dopt").querySelector(".det").value.trim() }));
+  const items = [...$("fdone").querySelectorAll("input[type=checkbox][value]:checked")].map(cb => ({ c: cb.value, d: cb.closest(".dopt").querySelector(".det").value.trim() }));
   if ($("fotherOn").checked && $("fother").value.trim()) { $("fother").value.split(";").forEach(x => { x = x.trim(); const i = x.indexOf(":"); if (x) items.push(i >= 0 ? { c: x.slice(0, i), d: x.slice(i + 1).trim() } : { c: x, d: "" }); }); }
   return noteOf(items).slice(0, 300);
 }
