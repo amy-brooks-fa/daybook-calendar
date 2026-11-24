@@ -270,6 +270,15 @@ body.needsignin .wrap,body.needsignin .fab{display:none!important}
 #pwDlg .sishow{display:flex;align-items:center;gap:8px;font-weight:500;color:var(--muted);margin:-4px 0 4px}
 #pwDlg .sishow input{width:20px;height:20px;margin:0}
 #pwDlg .pwnote{color:var(--muted);font-size:15px;margin:-6px 0 16px}
+/* Round 17 (2026-11-24): every booking shows start-end time + name right in the month grid (phone too) */
+.day .count{display:none}
+.day .names{display:flex;flex-direction:column;gap:2px;min-width:0;width:100%}
+.ev{display:block;min-width:0;border-radius:4px;background:var(--accent-soft);border-left:3px solid var(--accent);padding:1px 2px 1px 3px;font-size:10px;line-height:12px;color:var(--ink);overflow:hidden}
+.ev .et{display:block;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.ev .en{display:block;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
+.ev.c{background:var(--red-soft);border-left-color:var(--red);color:var(--red)}
+@media(max-width:859px){.day{padding:4px 1px 16px}.day .n{font-size:14px;width:24px;height:24px;margin-left:2px}.ev{border-left-width:2px;padding:1px 0 1px 2px;letter-spacing:-.01em}.ev .et{letter-spacing:-.04em}}
+@media(min-width:860px){.ev{font-size:13px;line-height:17px;padding:1px 4px 1px 5px}.ev .et{letter-spacing:0}}
 </style>
 </head>
 <body>
@@ -613,6 +622,12 @@ const mins = t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; 
 const hhmm = m => pad(Math.floor(m / 60) % 24) + ":" + pad(m % 60);
 const endM = e => (e.end_time && mins(e.end_time) > mins(e.time)) ? mins(e.end_time) : mins(e.time) + 60; // no end saved: 1 hour
 const endT = e => hhmm(endM(e));
+// Round 17 (2026-11-24): month grid shows start-end + name. Short form: 9-10:30a, 11:30a-12:15p; no end saved: start only.
+const calT = (t, ap) => { let [h, m] = t.split(":").map(Number); const a = h < 12 ? "a" : "p"; h = h % 12 || 12; return h + (m ? ":" + pad(m) : "") + (ap ? a : ""); };
+const calRange = x => { const okEnd = x.end_time && /^\d{1,2}:\d{2}$/.test(x.end_time) && mins(x.end_time) > mins(x.time);
+  if (!okEnd) return calT(x.time, true);
+  const same = (mins(x.time) < 720) === (mins(x.end_time) < 720);
+  return calT(x.time, !same) + "\u2013<wbr>" + calT(x.end_time, true); };
 const hours = e => (endM(e) - mins(e.time)) / 60;
 const fmtH = h => (Math.round(h * 100) / 100).toString();
 const money = n => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -734,7 +749,7 @@ function render() {
     const hols = holsOf(k), hb = hebDate(k), nw = noWork(k);
     const cls = ["day", d.getMonth() !== view.getMonth() ? "other" : "", k === today ? "today" : "", k === selected ? "sel" : "", clash ? "clash" : "", nw ? "yt" : ""].join(" ");
     const holHtml = (hb ? '<span class="hd">' + hb[0] + '<span class="hm"> ' + hb[1] + "</span></span>" : "") + (hols.length ? '<span class="hdot hc-' + hols[0][1] + '"></span><span class="hol">' + hols.slice(0, 2).map(x => '<span class="hc-' + x[1] + '" title="' + esc(x[0]) + '">' + esc(x[0]) + "</span>").join("") + "</span>" : "");
-    const names = list.slice(0, 3).map(x => '<span class="chip' + (ov[x.id] ? " c" : "") + '">' + esc(fmtTime(x.time).replace(":00", "").replace(" ", "").toLowerCase() + " " + x.name) + "</span>").join("") + (list.length > 3 ? '<span class="more">+' + (list.length - 3) + " more</span>" : "");
+    const names = list.slice(0, 3).map(x => '<span class="ev' + (ov[x.id] ? " c" : "") + '"><span class="et">' + calRange(x) + '</span><span class="en">' + esc(x.name) + "</span></span>").join("") + (list.length > 3 ? '<span class="more">+' + (list.length - 3) + " more</span>" : "");
     html += '<button class="' + cls + '" data-d="' + k + '" aria-label="' + esc(fmtDay(k)) + (hols.length ? ", " + esc(hols.map(x => x[0]).join(", ")) : "") + ", " + list.length + ' booked"><span class="n">' + d.getDate() + "</span>" + holHtml + (list.length ? '<span class="count">' + list.length + '</span><span class="names">' + names + "</span>" : "") + "</button>";
   }
   $("grid").innerHTML = html;
