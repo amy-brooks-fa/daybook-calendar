@@ -265,6 +265,11 @@ body.needsignin .wrap,body.needsignin .fab{display:none!important}
 .sierr{color:var(--red);font-weight:600;min-height:24px;margin:12px 0 0;text-align:center}
 .sifoot{margin:28px 0 0;color:var(--muted);font-size:15px}
 .sifoot button{background:none;border:0;padding:4px 2px;color:var(--accent);font-weight:600;text-decoration:underline;font-size:15px}
+#pwDlg label{display:block;font-weight:600;font-size:16px;margin:0 0 6px}
+#pwDlg input[type=password],#pwDlg input[type=text]{display:block;width:100%;height:52px;border:1px solid var(--line);border-radius:var(--r);padding:0 14px;font-size:18px;background:#fff;margin:0 0 14px}
+#pwDlg .sishow{display:flex;align-items:center;gap:8px;font-weight:500;color:var(--muted);margin:-4px 0 4px}
+#pwDlg .sishow input{width:20px;height:20px;margin:0}
+#pwDlg .pwnote{color:var(--muted);font-size:15px;margin:-6px 0 16px}
 </style>
 </head>
 <body>
@@ -354,7 +359,7 @@ body.needsignin .wrap,body.needsignin .fab{display:none!important}
     <label class="chk noprint"><input type="checkbox" id="tPb" checked> When printing, start each client on a new page (each agency always starts on a new page)</label>
     <div class="rep" id="rep"></div>
   </div>
-  <p class="sifoot noprint" id="siFoot">Signed in as <b id="siWho"></b> &middot; <button type="button" id="siOut">Sign out</button></p>
+  <p class="sifoot noprint" id="siFoot">Signed in as <b id="siWho"></b> &middot; <button type="button" id="pwOpen">Change password</button> &middot; <button type="button" id="siOut">Sign out</button></p>
 </div>
 
 <dialog id="form">
@@ -430,6 +435,24 @@ body.needsignin .wrap,body.needsignin .fab{display:none!important}
   </form>
 </dialog>
 
+<dialog id="pwDlg">
+  <form class="dlg" id="pwForm" autocomplete="off">
+    <h3>Change password</h3>
+    <p class="pwnote">Other phones and computers will need to sign in again with the new password.</p>
+    <label for="pwOld">Old password</label>
+    <input type="password" id="pwOld" autocomplete="current-password" required>
+    <label for="pwNew">New password (at least 4 characters)</label>
+    <input type="password" id="pwNew" autocomplete="new-password" required>
+    <label for="pwNew2">New password again</label>
+    <input type="password" id="pwNew2" autocomplete="new-password" required>
+    <label class="sishow"><input type="checkbox" id="pwShow"> Show passwords</label>
+    <p class="err" id="pwErr" role="alert"></p>
+    <div class="actions">
+      <button class="btn" type="button" id="pwCancel">Cancel</button>
+      <button class="btn primary" type="submit" id="pwSave">Change password</button>
+    </div>
+  </form>
+</dialog>
 <dialog id="cliDelDlg">
   <div class="dlg">
     <h3>Delete this client?</h3>
@@ -556,6 +579,25 @@ function showSignin(msg) {
       try { localStorage.setItem(AUTH_LS, JSON.stringify({ token: d.token, user: d.user })); } catch (e) {}
       location.reload();
     } else { $("siErr").textContent = r && r.status === 401 ? "Wrong username or password." : "Could not reach the calendar. Check the internet and try again."; $("siPass").select(); }
+  };
+  $("pwOpen").onclick = () => { ["pwOld", "pwNew", "pwNew2"].forEach(i => { $(i).value = ""; $(i).type = "password"; }); $("pwShow").checked = false; $("pwErr").textContent = ""; $("pwDlg").showModal(); };
+  $("pwCancel").onclick = () => $("pwDlg").close();
+  $("pwShow").onchange = () => ["pwOld", "pwNew", "pwNew2"].forEach(i => $(i).type = $("pwShow").checked ? "text" : "password");
+  $("pwForm").onsubmit = async ev => {
+    ev.preventDefault();
+    const o = $("pwOld").value, n = $("pwNew").value, n2 = $("pwNew2").value, err = m => { $("pwErr").textContent = m; };
+    if (!o) return err("Please type the old password.");
+    if (n.length < 4) return err("The new password must be at least 4 characters.");
+    if (n !== n2) return err("The two new passwords are not the same. Please type them again.");
+    if (n === o) return err("The new password is the same as the old one.");
+    err(""); $("pwSave").disabled = true; $("pwSave").textContent = "Saving…";
+    const r = await api("password", { method: "POST", body: JSON.stringify({ old: o, new: n }) });
+    $("pwSave").disabled = false; $("pwSave").textContent = "Change password";
+    if (r.status === 200 && r.data.token) {
+      try { localStorage.setItem(AUTH_LS, JSON.stringify({ token: r.data.token, user: r.data.user })); } catch (e) {}
+      $("pwDlg").close(); toast("Password changed");
+    } else if (r.status === 401) $("pwDlg").close();
+    else err((r.data && r.data.error) || "Could not change it. Check the internet and try again.");
   };
   $("siOut").onclick = () => { if (confirm("Sign out on this device?")) { try { localStorage.removeItem(AUTH_LS); } catch (e) {} location.reload(); } };
 })();

@@ -48,21 +48,43 @@ async function hmac(secret, msg) {
 }
 function same(a, b) { a = String(a); b = String(b); let d = a.length ^ b.length; for (let i = 0; i < Math.max(a.length, b.length); i++) d |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0); return d === 0; }
 const TOKEN_DAYS = 180;
-async function makeToken(env, user) { const p = user + "." + (Date.now() + TOKEN_DAYS * 864e5); return p + "." + await hmac(env.AUTH_SECRET, p); }
+// 2026-11-24 (2): the password can be changed from the page. The new salted hash lives in this app's own D1 table auth_settings
+// (k,v rows: salt, hash, gen). No row -> the env secrets (AUTH_SALT/AUTH_HASH) are used. "gen" is in every token; a password
+// change sets a new gen, so every other device is signed out (the device that changed it gets a fresh token).
+async function creds(env) {
+  const c = { salt: env.AUTH_SALT, hash: env.AUTH_HASH, gen: "0" };
+  try { ((await env.DB.prepare("SELECT k,v FROM auth_settings").all()).results || []).forEach(r => { if (r.k in c && r.v) c[r.k] = r.v; }); } catch (e) {}
+  return c;
+}
+const rnd = n => b64u(crypto.getRandomValues(new Uint8Array(n)));
+async function makeToken(env, user, gen) { const p = user + "." + (Date.now() + TOKEN_DAYS * 864e5) + "." + gen; return p + "." + await hmac(env.AUTH_SECRET, p); }
 async function tokenOk(env, req) {
   if (!env.AUTH_SECRET || !env.AUTH_USER) return false;
   const m = /^Bearer\s+(\S+)$/.exec(req.headers.get("authorization") || ""); if (!m) return false;
-  const t = m[1].split("."); if (t.length !== 3) return false;
+  const t = m[1].split("."); if (t.length !== 3 && t.length !== 4) return false;
   if (t[0] !== env.AUTH_USER || !(Number(t[1]) > Date.now())) return false;
-  return same(t[2], await hmac(env.AUTH_SECRET, t[0] + "." + t[1]));
+  const gen = t.length === 4 ? t[2] : "0", sig = t[t.length - 1];
+  if (!same(sig, await hmac(env.AUTH_SECRET, t.slice(0, -1).join(".")))) return false;
+  return same(gen, (await creds(env)).gen);
 }
 async function login(req, env) {
   let b = {}; try { b = await req.json(); } catch (e) {}
-  const user = String(b.user || "").trim().toLowerCase(), pass = String(b.pass || "");
-  if (env.AUTH_USER && env.AUTH_HASH && env.AUTH_SALT && same(user, env.AUTH_USER) && same(await sha256(env.AUTH_SALT + pass), env.AUTH_HASH))
-    return json({ ok: true, token: await makeToken(env, env.AUTH_USER), user: env.AUTH_USER, days: TOKEN_DAYS });
+  const user = String(b.user || "").trim().toLowerCase(), pass = String(b.pass || ""), c = await creds(env);
+  if (env.AUTH_USER && c.hash && c.salt && same(user, env.AUTH_USER) && same(await sha256(c.salt + pass), c.hash))
+    return json({ ok: true, token: await makeToken(env, env.AUTH_USER, c.gen), user: env.AUTH_USER, days: TOKEN_DAYS });
   await new Promise(r => setTimeout(r, 700)); // slow down guessing
   return json({ error: "Wrong username or password." }, 401);
+}
+async function changePassword(req, env) { // caller already has a valid token
+  let b = {}; try { b = await req.json(); } catch (e) {}
+  const old = String(b.old || ""), nw = String(b.new || ""), c = await creds(env);
+  if (!same(await sha256(c.salt + old), c.hash)) { await new Promise(r => setTimeout(r, 700)); return json({ error: "The old password is not right." }, 403); }
+  if (nw.length < 4) return json({ error: "The new password must be at least 4 characters." }, 400);
+  if (nw.length > 100) return json({ error: "The new password is too long." }, 400);
+  const salt = rnd(18), gen = rnd(9), hash = await sha256(salt + nw), q = "INSERT INTO auth_settings (k,v) VALUES (?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v";
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS auth_settings (k TEXT PRIMARY KEY, v TEXT)").run();
+  await env.DB.batch([env.DB.prepare(q).bind("salt", salt), env.DB.prepare(q).bind("hash", hash), env.DB.prepare(q).bind("gen", gen)]);
+  return json({ ok: true, token: await makeToken(env, env.AUTH_USER, gen), user: env.AUTH_USER });
 }
 
 // The GitHub Pages copy of the page (https://amy-brooks-fa.github.io/daybook-calendar/?k=<KEY>) calls this API from another origin.
@@ -99,6 +121,7 @@ async function handle(req, env) {
     if (parts[2] !== "api") return new Response("Not found", { status: 404 });
     if (parts[3] === "login" && parts.length === 4 && req.method === "POST") return login(req, env);
     if (!(await tokenOk(env, req))) return json({ error: "Please sign in.", signin: true }, 401);
+    if (parts[3] === "password" && parts.length === 4 && req.method === "POST") return changePassword(req, env);
 
     const id = parts[4];
     const now = new Date().toISOString();
