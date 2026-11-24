@@ -6,7 +6,11 @@ T=$(grep -o 'cfut_[A-Za-z0-9_-]*' ~/notes/accounts/cloudflare.md); A=8bcd9350037
 KEY=$(cat "$(dirname "$0")/key.txt")
 # 2026-11-24 sign-in: auth.env (private, never pushed) holds AUTH_USER, AUTH_SALT, AUTH_HASH=sha256(salt+password), AUTH_SECRET (token signing).
 . "$(dirname "$0")/auth.env"; [ -n "$AUTH_USER" ] && [ -n "$AUTH_HASH" ] && [ -n "$AUTH_SECRET" ] || { echo "auth.env missing - stop"; exit 1; }
-mint() { python3 -c 'import sys,hmac,hashlib,base64,time;u,s=sys.argv[1:3];p=u+"."+str(int(time.time()*1000)+600000);print(p+"."+base64.urlsafe_b64encode(hmac.new(s.encode(),p.encode(),hashlib.sha256).digest()).decode().rstrip("="))' "$1" "$2"; }
+# token gen = current "gen" row of that app's D1 table auth_settings (set when the password is changed from the page), else 0
+gen() { curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$A/d1/database/$1/query" -H "Authorization: Bearer $T" -H 'content-type: application/json' -d '{"sql":"SELECT v FROM auth_settings WHERE k='"'gen'"'"}' | python3 -c 'import json,sys
+try: r=json.load(sys.stdin)["result"][0]["results"]; print(r[0]["v"] if r else "0")
+except Exception: print("0")'; }
+mint() { python3 -c 'import sys,hmac,hashlib,base64,time;u,s,g=sys.argv[1:4];p=u+"."+str(int(time.time()*1000)+600000)+"."+g;print(p+"."+base64.urlsafe_b64encode(hmac.new(s.encode(),p.encode(),hashlib.sha256).digest()).decode().rstrip("="))' "$1" "$2" "$3"; }
 META='{"main_module":"worker.js","compatibility_date":"2025-06-01","bindings":[{"type":"d1","name":"DB","id":"b0e84bb7-47ac-46ec-8d67-a3d607cb1949"},{"type":"plain_text","name":"KEY","text":"'$KEY'"},{"type":"secret_text","name":"AUTH_USER","text":"'$AUTH_USER'"},{"type":"secret_text","name":"AUTH_SALT","text":"'$AUTH_SALT'"},{"type":"secret_text","name":"AUTH_HASH","text":"'$AUTH_HASH'"},{"type":"secret_text","name":"AUTH_SECRET","text":"'$AUTH_SECRET'"}]}'
 cd "$(dirname "$0")"
 curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$A/workers/scripts/calendar" -H "Authorization: Bearer $T" \
@@ -34,7 +38,7 @@ GT=$(grep -o 'ghp_[A-Za-z0-9]*' ~/notes/accounts/github.md)
 [ -d "$R/.git" ] || { git clone -q "https://x-access-token:$GT@github.com/amy-brooks-fa/daybook-calendar.git" "$R" 2>&1 | grep -v "empty repository"; git -C "$R" remote set-url origin https://github.com/amy-brooks-fa/daybook-calendar.git; }
 git -C "$R" config user.name "Amy Brooks"; git -C "$R" config user.email "amy.brooks@fromassistant.com"
 cp page.html "$R/index.html"; cp page.html worker.js deploy.sh gen-holidays.mjs README.md "$R/"; touch "$R/.nojekyll"
-curl -s -H "Authorization: Bearer $(mint "$AUTH_USER" "$AUTH_SECRET")" "https://calendar.daybook-amy.workers.dev/c/$KEY/api/clients" | python3 -c '
+curl -s -H "Authorization: Bearer $(mint "$AUTH_USER" "$AUTH_SECRET" "$(gen b0e84bb7-47ac-46ec-8d67-a3d607cb1949)")" "https://calendar.daybook-amy.workers.dev/c/$KEY/api/clients" | python3 -c '
 import json,sys,re
 cl=json.load(sys.stdin)["clients"]; out=set()
 for c in cl:

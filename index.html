@@ -449,7 +449,7 @@ body.needsignin .wrap,body.needsignin .fab{display:none!important}
     <p class="err" id="pwErr" role="alert"></p>
     <div class="actions">
       <button class="btn" type="button" id="pwCancel">Cancel</button>
-      <button class="btn primary" type="submit" id="pwSave">Change password</button>
+      <button class="btn primary" type="submit" id="pwSave">Save</button>
     </div>
   </form>
 </dialog>
@@ -592,7 +592,7 @@ function showSignin(msg) {
     if (n === o) return err("The new password is the same as the old one.");
     err(""); $("pwSave").disabled = true; $("pwSave").textContent = "Saving…";
     const r = await api("password", { method: "POST", body: JSON.stringify({ old: o, new: n }) });
-    $("pwSave").disabled = false; $("pwSave").textContent = "Change password";
+    $("pwSave").disabled = false; $("pwSave").textContent = "Save";
     if (r.status === 200 && r.data.token) {
       try { localStorage.setItem(AUTH_LS, JSON.stringify({ token: r.data.token, user: r.data.user })); } catch (e) {}
       $("pwDlg").close(); toast("Password changed");
