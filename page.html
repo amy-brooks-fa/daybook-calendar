@@ -1808,7 +1808,7 @@ async function pdfFill(M, plan, d) {
     if (!Object.keys(plan.cols).length) fit = 0;
     // Round 15: every value on the sheet in ONE letter size (owner: "everything the same size", the date as big as the times).
     // The size: 10 pt, or the biggest size at which every value fits its box (not below 7 pt). A date that doesn't fit
-    // at that size is SHOWN shorter (11/1/26, then 11/1 - the month and year are on the sheet; the box keeps the full date)
+    // at that size is SHOWN shorter (Round 16: never without the year - see below; the box keeps the full date)
     // instead of smaller. Only "What was done" text too long for its box gets smaller letters (not below 6 pt).
     // Every box is redrawn at that size, so each is shown the way the sheet's own format shows it ($ 45.08, 10,178, (845) 250-8282).
     { const doneIds = new Set((plan.cols.done || []).map(f => f.id)), dateL = plan.cols.date || [];
@@ -1826,17 +1826,24 @@ async function pdfFill(M, plan, d) {
       const show = new Map(allF.map(f => [f, fmtShow(f, was(f))]));
       const fitsAt = (t, f) => { let z = 10; while (z > 7 && (font.widthOfTextAtSize(t, z) > f.w - 4 || z > f.h * 0.75)) z -= 0.5; return z; };
       let Z = 10; allF.forEach(f => { const t = show.get(f); if (t && !doneIds.has(f.id) && !dateL.includes(f)) Z = Math.min(Z, fitsAt(t, f)); });
-      const dates = dateL.filter(f => was(f));
-      if (dates.length) { const forms = [t => t, t => t.replace(/\/\d\d(\d\d)$/, "/$1"), t => t.replace(/\/\d{2,4}$/, "")];
-        const fm = forms.find(g => dates.every(f => fitsAt(g(was(f)), f) >= Z)) || forms[2];
-        dates.forEach(f => { const v = fm(was(f)); show.set(f, v); Z = Math.min(Z, fitsAt(v, f)); }); }
-      allF.forEach(f => { try { const tf = form.getTextField(f.name), t = show.get(f); let z = Z;
+      // Round 16 (owner: "You have to also put the year"): a date ALWAYS shows its year. The dates no longer make the rest of
+      // the sheet smaller; the date column gets its own size: the full date (11/14/2026) at the sheet's size if it fits, else
+      // the full date if it fits at 7 pt or more, else 11/14/26 at the biggest size where every date in the column fits.
+      const dates = dateL.filter(f => was(f)), dateZ = new Map();
+      if (dates.length) { const yy = t => t.replace(/\/\d\d(\d\d)$/, "/$1");
+        const fitD = (t, f, z) => { while (z > 5 && (font.widthOfTextAtSize(t, z) > f.w - 3 || z > f.h * 0.75)) z = Math.round((z - 0.1) * 10) / 10; return z; };
+        const colZ = g => Math.min(...dates.map(f => fitD(g(was(f)), f, Z)));
+        const full = colZ(t => t), fm = full >= Z || full >= 7 ? t => t : yy, dz = fm === yy ? colZ(yy) : full;
+        dates.forEach(f => { show.set(f, fm(was(f))); dateZ.set(f, dz); }); }
+      allF.forEach(f => { try { const tf = form.getTextField(f.name), t = show.get(f); let z = dateZ.get(f) || Z;
         if (doneIds.has(f.id)) while (t && z > 6 && font.widthOfTextAtSize(t, z) > f.w - 4) z -= 0.5;
         tf.setFontSize(z); } catch (e) { console.warn(e); } });
       try { form.updateFieldAppearances(font); } catch (e) { console.warn(e); }
       // shown text differs from the value: draw the shown text, keep the value (as the sheet's own format would)
       allF.forEach(f => { const v = was(f), t = show.get(f); if (!v || t === v) return;
-        try { const tf = form.getTextField(f.name); tf.acroField.setValue(PDFLib.PDFHexString.fromText(t)); tf.updateAppearances(font); tf.acroField.setValue(PDFLib.PDFHexString.fromText(v)); } catch (e) { console.warn(e); } }); }
+        try { const tf = form.getTextField(f.name); tf.acroField.setValue(PDFLib.PDFHexString.fromText(t)); tf.updateAppearances(font); tf.acroField.setValue(PDFLib.PDFHexString.fromText(v)); } catch (e) { console.warn(e); } });
+      // a date box gets "auto" letter size (as on the HCS sheet), so if someone retypes it in Acrobat the full date still fits
+      dateZ.forEach((z, f) => { try { const af = form.getTextField(f.name).acroField, da = af.getDefaultAppearance(); if (da) af.setDefaultAppearance(da.replace(/[\d.]+\s+Tf/, "0 Tf")); } catch (e) { console.warn(e); } }); }
   } else {
     const W = PDFLib.rgb(1, 1, 1), K = PDFLib.rgb(0, 0, 0), pages = doc.getPages();
     const box = (pg, x, yc, w, h) => pg.drawRectangle({ x, y: yc - h / 2, width: w, height: h, color: W });
@@ -1848,10 +1855,13 @@ async function pdfFill(M, plan, d) {
     CV_FIELDS.forEach(([k]) => { const sp = plan.spots[k]; if (sp) Z = Math.min(Z, fz(S(cvVal(d, k)), (sp.w || 150) - 2, Z)); });
     const shownRows = R0 ? d.rows.slice(0, n0) : [];
     if (R0) Object.entries(R0.cols).forEach(([ro, c]) => { if (ro !== "done" && ro !== "date") shownRows.forEach(r => Z = Math.min(Z, fz(S(rowVal(r, ro)), (c.w || 60) - 2, Z))); });
-    let dateF = t => t;
-    if (R0 && R0.cols.date) { const dw = (R0.cols.date.w || 60) - 2, forms = [t => t, t => t.replace(/\/\d\d(\d\d)$/, "/$1"), t => t.replace(/\/\d{2,4}$/, "")];
-      dateF = forms.find(g => shownRows.every(r => fz(S(g(rowVal(r, "date"))), dw, Z) >= Z)) || forms[2];
-      shownRows.forEach(r => Z = Math.min(Z, fz(S(dateF(rowVal(r, "date"))), dw, Z))); }
+    // Round 16: the date always shows its year, in the date column's own size (full date if it fits at the sheet's size or
+    // at 7 pt or more, else 11/14/26 at the biggest size that fits); the dates don't make the rest of the sheet smaller.
+    let dateF = t => t, dateZ = Z;
+    if (R0 && R0.cols.date && shownRows.length) { const dw = (R0.cols.date.w || 60) - 2, yy = t => t.replace(/\/\d\d(\d\d)$/, "/$1");
+      const fd = (t, z) => { while (z > 5 && font.widthOfTextAtSize(t, z) > dw) z = Math.round((z - 0.1) * 10) / 10; return z; };
+      const colZ = g => Math.min(...shownRows.map(r => fd(S(g(rowVal(r, "date"))), Z)));
+      const full = colZ(t => t); dateF = full >= Z || full >= 7 ? t => t : yy; dateZ = dateF === yy ? colZ(yy) : full; }
     CV_FIELDS.forEach(([k]) => { const sp = plan.spots[k]; if (!sp) { if (k !== "agency" || d.agency) missing.push(k); return; }
       const pg = pages[sp.p] || pages[0], size = Z, w = sp.w || 150;
       const [t, z] = fitText(font, S(cvVal(d, k)), w - 2, size, size);
@@ -1864,7 +1874,7 @@ async function pdfFill(M, plan, d) {
       for (let i = 0; i < fit; i++) { const yc = R.y1 - i * h, r = d.rows[i];
         Object.entries(R.cols).forEach(([ro, c]) => { const w = c.w || 60;
           if (plan.white && (r || R.n)) box(pg, c.x - 1, yc, w, Math.max(4, Math.min(h - 6, size * 1.7))); // leaves the table's lines alone
-          if (r) { const [t, z] = fitText(font, S(ro === "date" ? dateF(rowVal(r, ro)) : rowVal(r, ro)), w - 2, size, ro === "done" ? Math.min(size, 6) : size); pg.drawText(t, { x: c.x + 1, y: yc - z * 0.35, size: z, font, color: K }); } }); }
+          if (r) { const [t, z] = fitText(font, S(ro === "date" ? dateF(rowVal(r, ro)) : rowVal(r, ro)), w - 2, ro === "date" ? dateZ : size, ro === "done" ? Math.min(size, 6) : ro === "date" ? dateZ : size); pg.drawText(t, { x: c.x + 1, y: yc - z * 0.35, size: z, font, color: K }); } }); }
       // total hours under the last booking, if the sheet has no spot of its own for it and there is room
       if (!plan.spots.total && R.cols.hours && d.rows.length < fit) { const yc = R.y1 - d.rows.length * h, c0 = Object.values(R.cols).sort((a, b) => a.x - b.x)[0];
         const hc = R.cols.hours; pg.drawText("Total", { x: c0 === hc ? hc.x - 30 : c0.x + 1, y: yc - size * 0.35, size, font: bold }); pg.drawText(String(d.total), { x: hc.x + 1, y: yc - size * 0.35, size, font: bold }); missing = missing.filter(k => k !== "total"); }
