@@ -34,6 +34,37 @@ async function setClientRate(env, name, rate) {
     .bind(key(name), name, rate, new Date().toISOString()).run();
 }
 
+// 2026-11-24: sign-in. Username/password are checked here on the server; the password itself is stored nowhere,
+// only AUTH_HASH = sha256hex(AUTH_SALT + password) (secret env vars, never in the page or on GitHub).
+// A good sign-in gets a token "<user>.<expires ms>.<HMAC-SHA256 with AUTH_SECRET>", valid 180 days; every API call
+// except /api/login must send it as "Authorization: Bearer <token>", or it gets 401.
+const enc = new TextEncoder();
+const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const sha256 = async t => hex(await crypto.subtle.digest("SHA-256", enc.encode(t)));
+async function hmac(secret, msg) {
+  const k = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return b64u(await crypto.subtle.sign("HMAC", k, enc.encode(msg)));
+}
+function same(a, b) { a = String(a); b = String(b); let d = a.length ^ b.length; for (let i = 0; i < Math.max(a.length, b.length); i++) d |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0); return d === 0; }
+const TOKEN_DAYS = 180;
+async function makeToken(env, user) { const p = user + "." + (Date.now() + TOKEN_DAYS * 864e5); return p + "." + await hmac(env.AUTH_SECRET, p); }
+async function tokenOk(env, req) {
+  if (!env.AUTH_SECRET || !env.AUTH_USER) return false;
+  const m = /^Bearer\s+(\S+)$/.exec(req.headers.get("authorization") || ""); if (!m) return false;
+  const t = m[1].split("."); if (t.length !== 3) return false;
+  if (t[0] !== env.AUTH_USER || !(Number(t[1]) > Date.now())) return false;
+  return same(t[2], await hmac(env.AUTH_SECRET, t[0] + "." + t[1]));
+}
+async function login(req, env) {
+  let b = {}; try { b = await req.json(); } catch (e) {}
+  const user = String(b.user || "").trim().toLowerCase(), pass = String(b.pass || "");
+  if (env.AUTH_USER && env.AUTH_HASH && env.AUTH_SALT && same(user, env.AUTH_USER) && same(await sha256(env.AUTH_SALT + pass), env.AUTH_HASH))
+    return json({ ok: true, token: await makeToken(env, env.AUTH_USER), user: env.AUTH_USER, days: TOKEN_DAYS });
+  await new Promise(r => setTimeout(r, 700)); // slow down guessing
+  return json({ error: "Wrong username or password." }, 401);
+}
+
 // The GitHub Pages copy of the page (https://amy-brooks-fa.github.io/daybook-calendar/?k=<KEY>) calls this API from another origin.
 const CORS_ORIGINS = ["https://amy-brooks-fa.github.io"];
 
@@ -41,7 +72,7 @@ export default {
   async fetch(req, env) {
     const origin = req.headers.get("origin") || "";
     const allowed = CORS_ORIGINS.includes(origin);
-    const cors = { "access-control-allow-origin": origin, "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS", "access-control-allow-headers": "content-type", "access-control-max-age": "86400", "vary": "origin" };
+    const cors = { "access-control-allow-origin": origin, "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS", "access-control-allow-headers": "content-type, authorization", "access-control-max-age": "86400", "vary": "origin" };
     const parts = new URL(req.url).pathname.split("/").filter(Boolean);
     if (req.method === "OPTIONS") {
       if (allowed && parts[0] === "c" && parts[1] === env.KEY && parts[2] === "api") return new Response(null, { status: 204, headers: cors });
@@ -66,6 +97,8 @@ async function handle(req, env) {
       return new Response(PAGE, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-robots-tag": "noindex" } });
     }
     if (parts[2] !== "api") return new Response("Not found", { status: 404 });
+    if (parts[3] === "login" && parts.length === 4 && req.method === "POST") return login(req, env);
+    if (!(await tokenOk(env, req))) return json({ error: "Please sign in.", signin: true }, 401);
 
     const id = parts[4];
     const now = new Date().toISOString();

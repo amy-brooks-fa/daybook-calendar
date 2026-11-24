@@ -248,9 +248,39 @@ details.ugrp summary{cursor:pointer;font-size:13px;letter-spacing:.06em;text-tra
 .day .hd{font-size:12px}
 @media(min-width:860px){.day{min-height:132px;padding:8px}.day .n{font-size:20px;width:36px;height:36px}.chip{font-size:13.5px;line-height:21px}.more{font-size:13px}
 .day .hd{font-size:13.5px;top:14px;right:9px}.day .hol{font-size:13px;line-height:17px}}
+/* 2026-11-24: sign-in screen */
+#signin{display:none}
+body.needsignin #signin{display:flex}
+body.needsignin .wrap,body.needsignin .fab{display:none!important}
+#signin{min-height:100vh;min-height:100dvh;align-items:center;justify-content:center;padding:24px 16px}
+.sicard{width:100%;max-width:400px;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:28px 22px;box-shadow:0 8px 30px rgba(28,27,25,.07)}
+.sicard h1{font-size:30px;margin:0 0 4px}
+.sicard .sihint{color:var(--muted);margin:0 0 22px;font-size:16px}
+.sicard label{display:block;font-weight:600;font-size:16px;margin:0 0 6px}
+.sicard input[type=text],.sicard input[type=password]{display:block;width:100%;height:56px;border:1px solid var(--line);border-radius:var(--r);padding:0 14px;font-size:19px;background:#fff;margin:0 0 18px}
+.sicard input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.sicard .sishow{display:flex;align-items:center;gap:8px;font-weight:500;color:var(--muted);margin:-8px 0 20px}
+.sicard .sishow input{width:20px;height:20px;margin:0}
+.sicard button{width:100%;height:56px;font-size:18px}
+.sierr{color:var(--red);font-weight:600;min-height:24px;margin:12px 0 0;text-align:center}
+.sifoot{margin:28px 0 0;color:var(--muted);font-size:15px}
+.sifoot button{background:none;border:0;padding:4px 2px;color:var(--accent);font-weight:600;text-decoration:underline;font-size:15px}
 </style>
 </head>
 <body>
+<div id="signin">
+  <form class="sicard" id="siForm" autocomplete="on">
+    <h1>Booking Calendar</h1>
+    <p class="sihint">Please sign in.</p>
+    <label for="siUser">Username</label>
+    <input type="text" id="siUser" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+    <label for="siPass">Password</label>
+    <input type="password" id="siPass" name="password" autocomplete="current-password" required>
+    <label class="sishow"><input type="checkbox" id="siShow"> Show password</label>
+    <button class="btn primary" type="submit" id="siBtn">Sign in</button>
+    <p class="sierr" id="siErr" role="alert"></p>
+  </form>
+</div>
 <div class="wrap">
   <div class="tabs noprint" role="tablist">
     <button id="tabCal" class="on">Calendar</button>
@@ -324,6 +354,7 @@ details.ugrp summary{cursor:pointer;font-size:13px;letter-spacing:.06em;text-tra
     <label class="chk noprint"><input type="checkbox" id="tPb" checked> When printing, start each client on a new page (each agency always starts on a new page)</label>
     <div class="rep" id="rep"></div>
   </div>
+  <p class="sifoot noprint" id="siFoot">Signed in as <b id="siWho"></b> &middot; <button type="button" id="siOut">Sign out</button></p>
 </div>
 
 <dialog id="form">
@@ -499,6 +530,35 @@ const GH_PAGES = /\.github\.io$/.test(location.hostname), GH_KEY = new URLSearch
 const API = GH_PAGES ? "https://calendar.daybook-amy.workers.dev/c/" + encodeURIComponent(GH_KEY) + "/api/" : location.pathname.replace(/\/?$/, "/") + "api/";
 if (GH_PAGES && !GH_KEY) document.addEventListener("DOMContentLoaded", () => { document.body.innerHTML = '<p style="font:18px system-ui;padding:24px">This link is missing its key. Please open the full link you were sent.</p>'; });
 const $ = id => document.getElementById(id);
+/* 2026-11-24: sign-in. The server checks the username/password and gives a token; it is kept on this device
+   (180 days) and sent with every API call. Stored per app (the API address), since several copies share github.io. */
+const AUTH_LS = "cal_auth:" + API;
+const authGet = () => { try { return JSON.parse(localStorage.getItem(AUTH_LS) || "null"); } catch (e) { return null; } };
+function showSignin(msg) {
+  try { localStorage.removeItem(AUTH_LS); } catch (e) {}
+  document.body.classList.add("needsignin");
+  $("siErr").textContent = msg || "";
+  setTimeout(() => { try { $("siUser").focus(); } catch (e) {} }, 50);
+}
+(function () {
+  const a = authGet();
+  if (!a || !a.token) showSignin(); else $("siWho").textContent = a.user || "";
+  $("siShow").onchange = () => { $("siPass").type = $("siShow").checked ? "text" : "password"; };
+  $("siForm").onsubmit = async ev => {
+    ev.preventDefault();
+    const user = $("siUser").value.trim(), pass = $("siPass").value;
+    if (!user || !pass) { $("siErr").textContent = "Please type your username and password."; return; }
+    $("siBtn").disabled = true; $("siBtn").textContent = "Signing in…"; $("siErr").textContent = "";
+    let r = null, d = {};
+    try { r = await fetch(API + "login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user, pass }), cache: "no-store" }); d = await r.json(); } catch (e) {}
+    $("siBtn").disabled = false; $("siBtn").textContent = "Sign in";
+    if (r && r.status === 200 && d.token) {
+      try { localStorage.setItem(AUTH_LS, JSON.stringify({ token: d.token, user: d.user })); } catch (e) {}
+      location.reload();
+    } else { $("siErr").textContent = r && r.status === 401 ? "Wrong username or password." : "Could not reach the calendar. Check the internet and try again."; $("siPass").select(); }
+  };
+  $("siOut").onclick = () => { if (confirm("Sign out on this device?")) { try { localStorage.removeItem(AUTH_LS); } catch (e) {} location.reload(); } };
+})();
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const pad = n => String(n).padStart(2, "0");
 const iso = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
@@ -585,8 +645,10 @@ function doneNote() {
 
 async function api(path, opts = {}) {
   try {
-    const r = await fetch(API + path, { ...opts, headers: { "content-type": "application/json" }, cache: "no-store" });
+    const a = authGet(); if (!a || !a.token) return { status: 401, data: {} };
+    const r = await fetch(API + path, { ...opts, headers: { "content-type": "application/json", "authorization": "Bearer " + a.token }, cache: "no-store" });
     let data = {}; try { data = await r.json(); } catch (e) {}
+    if (r.status === 401 && data.signin) showSignin("Please sign in again.");
     return { status: r.status, data };
   } catch (e) { return { status: 0, data: {} }; }
 }
