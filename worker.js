@@ -87,6 +87,76 @@ async function changePassword(req, env) { // caller already has a valid token
   return json({ ok: true, token: await makeToken(env, env.AUTH_USER, gen), user: env.AUTH_USER });
 }
 
+// 2026-11-24 (3): "Forgot password?" by TEXT. The Worker cannot send texts itself; it only makes the code.
+// Switched on only when RESET_PHONE (secret, a +1 phone number) is set; otherwise the link is hidden and these calls say off.
+// D1 table reset_codes: id, code_hash (HMAC of the code), code_plain (held ONLY until the relay computer fetched+texted it,
+// or the code expired), created, expires (15 min), tries (max 5 wrong), used, texted.
+// The relay (owner's assistant computer) reads pending codes from GET /api/reset-outbox with header
+// "x-relay-secret: <RELAY_SECRET>", texts them, then POST /api/reset-outbox/<id>/texted wipes the plain code.
+const RESET_MIN = 15, RESET_PER_HOUR = 3, RESET_TRIES = 5;
+const resetOn = env => !!(env.RESET_PHONE && String(env.RESET_PHONE).replace(/\D/g, "").length >= 10 && env.RELAY_SECRET);
+async function resetTable(env) {
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS reset_codes (id INTEGER PRIMARY KEY AUTOINCREMENT, code_hash TEXT, code_plain TEXT, created INTEGER, expires INTEGER, tries INTEGER DEFAULT 0, used INTEGER DEFAULT 0, texted INTEGER DEFAULT 0)").run();
+  // plain codes never outlive their code
+  await env.DB.prepare("UPDATE reset_codes SET code_plain=NULL WHERE code_plain IS NOT NULL AND (expires<? OR used=1 OR tries>=?)").bind(Date.now(), RESET_TRIES).run();
+}
+const codeHash = (env, id, code) => hmac(env.AUTH_SECRET, "reset:" + id + ":" + code);
+function resetInfo(env) {
+  if (!resetOn(env)) return json({ on: false });
+  return json({ on: true, last4: String(env.RESET_PHONE).replace(/\D/g, "").slice(-4), minutes: RESET_MIN });
+}
+async function resetRequest(env) {
+  if (!resetOn(env)) return json({ error: "Not available." }, 404);
+  await resetTable(env);
+  const now = Date.now();
+  const n = (await env.DB.prepare("SELECT COUNT(*) AS n FROM reset_codes WHERE created>?").bind(now - 3600e3).first()).n;
+  if (n >= RESET_PER_HOUR) return json({ error: "Too many codes asked for. Please wait an hour and try again, or use the last code you got." }, 429);
+  const r = new Uint32Array(1); crypto.getRandomValues(r);
+  const code = String(r[0] % 1000000).padStart(6, "0");
+  const ins = await env.DB.prepare("INSERT INTO reset_codes (code_hash, code_plain, created, expires) VALUES ('', ?, ?, ?)").bind(code, now, now + RESET_MIN * 60e3).run();
+  const id = ins.meta.last_row_id;
+  await env.DB.prepare("UPDATE reset_codes SET code_hash=? WHERE id=?").bind(await codeHash(env, id, code), id).run();
+  return json({ ok: true, last4: String(env.RESET_PHONE).replace(/\D/g, "").slice(-4), minutes: RESET_MIN });
+}
+async function resetVerify(req, env) {
+  if (!resetOn(env)) return json({ error: "Not available." }, 404);
+  let b = {}; try { b = await req.json(); } catch (e) {}
+  const code = String(b.code || "").replace(/\D/g, ""), nw = String(b.new || "");
+  if (nw.length < 4) return json({ error: "The new password must be at least 4 characters." }, 400);
+  if (nw.length > 100) return json({ error: "The new password is too long." }, 400);
+  await resetTable(env);
+  const now = Date.now();
+  const live = (await env.DB.prepare("SELECT id, code_hash FROM reset_codes WHERE used=0 AND expires>? AND tries<?").bind(now, RESET_TRIES).all()).results || [];
+  if (!live.length) return json({ error: "This code has run out (or was used). Please ask for a new code.", expired: true }, 410);
+  let hit = null;
+  if (code.length === 6) for (const c of live) if (same(await codeHash(env, c.id, code), c.code_hash)) hit = c;
+  if (!hit) {
+    await env.DB.prepare("UPDATE reset_codes SET tries=tries+1 WHERE used=0 AND expires>? AND tries<?").bind(now, RESET_TRIES).run();
+    await new Promise(r => setTimeout(r, 700));
+    const left = (await env.DB.prepare("SELECT MAX(?-tries) AS l FROM reset_codes WHERE used=0 AND expires>?").bind(RESET_TRIES, now).first()).l;
+    return json(left > 0 ? { error: "That code is not right. Please check the text and try again." } : { error: "Too many wrong tries. Please ask for a new code.", expired: true }, left > 0 ? 403 : 410);
+  }
+  const salt = rnd(18), gen = rnd(9), hash = await sha256(salt + nw), q = "INSERT INTO auth_settings (k,v) VALUES (?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v";
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS auth_settings (k TEXT PRIMARY KEY, v TEXT)").run();
+  await env.DB.batch([env.DB.prepare(q).bind("salt", salt), env.DB.prepare(q).bind("hash", hash), env.DB.prepare(q).bind("gen", gen),
+    env.DB.prepare("UPDATE reset_codes SET used=1, code_plain=NULL WHERE used=0")]); // one good code ends all open codes
+  return json({ ok: true, token: await makeToken(env, env.AUTH_USER, gen), user: env.AUTH_USER });
+}
+async function resetOutbox(req, env, id, act) {
+  if (!env.RELAY_SECRET || !same(req.headers.get("x-relay-secret") || "", env.RELAY_SECRET)) { await new Promise(r => setTimeout(r, 700)); return json({ error: "no" }, 403); }
+  if (!resetOn(env)) return json({ on: false, pending: [] });
+  await resetTable(env);
+  if (req.method === "GET" && !id) {
+    const r = (await env.DB.prepare("SELECT id, code_plain AS code, expires FROM reset_codes WHERE texted=0 AND used=0 AND code_plain IS NOT NULL AND expires>? ORDER BY id").bind(Date.now()).all()).results || [];
+    return json({ on: true, phone: env.RESET_PHONE, pending: r });
+  }
+  if (req.method === "POST" && id && act === "texted") {
+    const r = await env.DB.prepare("UPDATE reset_codes SET texted=1, code_plain=NULL WHERE id=?").bind(Number(id)).run();
+    return json({ ok: true, changed: r.meta.changes });
+  }
+  return json({ error: "Not found" }, 404);
+}
+
 // The GitHub Pages copy of the page (https://amy-brooks-fa.github.io/daybook-calendar/?k=<KEY>) calls this API from another origin.
 const CORS_ORIGINS = ["https://amy-brooks-fa.github.io"];
 
@@ -120,6 +190,10 @@ async function handle(req, env) {
     }
     if (parts[2] !== "api") return new Response("Not found", { status: 404 });
     if (parts[3] === "login" && parts.length === 4 && req.method === "POST") return login(req, env);
+    if (parts[3] === "reset-info" && parts.length === 4 && req.method === "GET") return resetInfo(env);
+    if (parts[3] === "reset-request" && parts.length === 4 && req.method === "POST") return resetRequest(env);
+    if (parts[3] === "reset-verify" && parts.length === 4 && req.method === "POST") return resetVerify(req, env);
+    if (parts[3] === "reset-outbox") return resetOutbox(req, env, parts[4], parts[5]);
     if (!(await tokenOk(env, req))) return json({ error: "Please sign in.", signin: true }, 401);
     if (parts[3] === "password" && parts.length === 4 && req.method === "POST") return changePassword(req, env);
 

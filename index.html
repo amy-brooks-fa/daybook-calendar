@@ -266,6 +266,11 @@ body.needsignin .wrap,body.needsignin .fab{display:none!important}
 .sihelp{margin:14px 0 0;text-align:center;color:var(--muted);font-size:15px;line-height:1.45}.sihelp a{color:var(--accent);font-weight:600;white-space:nowrap}
 .sifoot{margin:28px 0 0;color:var(--muted);font-size:15px}
 .sifoot button{background:none;border:0;padding:4px 2px;color:var(--accent);font-weight:600;text-decoration:underline;font-size:15px}
+[hidden]{display:none!important}
+.sicard .silink{display:block;width:auto;height:auto;margin:14px auto 0;background:none;border:0;padding:6px 4px;color:var(--accent);font-weight:600;text-decoration:underline;font-size:17px}
+.sicard .sicode{letter-spacing:.3em;font-size:26px!important;text-align:center;font-variant-numeric:tabular-nums}
+.sicard .sinote{color:var(--muted);font-size:15px;margin:-10px 0 18px}
+.siok{color:var(--green,#1f7a3a);font-weight:600;text-align:center;margin:12px 0 0}
 #pwDlg label{display:block;font-weight:600;font-size:16px;margin:0 0 6px}
 #pwDlg input[type=password],#pwDlg input[type=text]{display:block;width:100%;height:52px;border:1px solid var(--line);border-radius:var(--r);padding:0 14px;font-size:18px;background:#fff;margin:0 0 14px}
 #pwDlg .sishow{display:flex;align-items:center;gap:8px;font-weight:500;color:var(--muted);margin:-4px 0 4px}
@@ -294,7 +299,31 @@ body.needsignin .wrap,body.needsignin .fab{display:none!important}
     <label class="sishow"><input type="checkbox" id="siShow"> Show password</label>
     <button class="btn primary" type="submit" id="siBtn">Sign in</button>
     <p class="sierr" id="siErr" role="alert"></p>
+    <button type="button" class="silink" id="fgOpen" hidden>Forgot password?</button>
     <p class="sihelp">Can't sign in or forgot your password? Please send an email to <a href="mailto:info@achievebeyondny.com">info@achievebeyondny.com</a></p>
+  </form>
+  <form class="sicard" id="fgForm" hidden>
+    <h1>Forgot password</h1>
+    <p class="sihint">We'll text a reset code to the phone on file (<span class="fgPhone"></span>).</p>
+    <button class="btn primary" type="submit" id="fgSend">Send code</button>
+    <p class="sierr" id="fgErr" role="alert"></p>
+    <button type="button" class="silink fgBack">Back to sign in</button>
+  </form>
+  <form class="sicard" id="rsForm" hidden autocomplete="off">
+    <h1>Enter the code</h1>
+    <p class="sihint">Code is on its way by text to <span class="fgPhone"></span> (may take up to 2 minutes). Enter it here.</p>
+    <label for="rsCode">Code from the text</label>
+    <input type="text" id="rsCode" class="sicode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*">
+    <p class="sinote">The code works for 15 minutes.</p>
+    <label for="rsNew">New password</label>
+    <input type="password" id="rsNew" autocomplete="new-password">
+    <label for="rsNew2">New password again</label>
+    <input type="password" id="rsNew2" autocomplete="new-password">
+    <label class="sishow"><input type="checkbox" id="rsShow"> Show passwords</label>
+    <button class="btn primary" type="submit" id="rsSave">Set new password</button>
+    <p class="sierr" id="rsErr" role="alert"></p>
+    <button type="button" class="silink" id="rsAgain">Send a new code</button>
+    <button type="button" class="silink fgBack">Back to sign in</button>
   </form>
 </div>
 <div class="wrap">
@@ -591,6 +620,46 @@ function showSignin(msg) {
       location.reload();
     } else { $("siErr").textContent = r && r.status === 401 ? "Wrong username or password." : "Could not reach the calendar. Check the internet and try again."; $("siPass").select(); }
   };
+  /* 2026-11-24 (3): Forgot password -> a 6-digit code is texted to the phone on file (only if this app has one set). */
+  const fgShow = id => { ["siForm", "fgForm", "rsForm"].forEach(f => $(f).hidden = f !== id); };
+  document.querySelectorAll(".fgBack").forEach(b => b.onclick = () => { fgShow("siForm"); $("siErr").textContent = ""; });
+  fetch(API + "reset-info", { cache: "no-store" }).then(r => r.json()).then(d => {
+    if (!d || !d.on || !d.last4) return;
+    document.querySelectorAll(".fgPhone").forEach(s => s.textContent = "\u2022\u2022\u2022-\u2022\u2022\u2022-" + d.last4);
+    $("fgOpen").hidden = false;
+  }).catch(() => {});
+  $("fgOpen").onclick = () => { $("fgErr").textContent = ""; fgShow("fgForm"); };
+  async function fgSend(errBox) {
+    let r = null, d = {};
+    try { r = await fetch(API + "reset-request", { method: "POST", cache: "no-store" }); d = await r.json(); } catch (e) {}
+    if (r && r.status === 200 && d.ok) return true;
+    $(errBox).textContent = (d && d.error) || "Could not reach the calendar. Check the internet and try again."; return false;
+  }
+  $("fgForm").onsubmit = async ev => {
+    ev.preventDefault(); $("fgSend").disabled = true; $("fgSend").textContent = "Sending…"; $("fgErr").textContent = "";
+    const ok = await fgSend("fgErr");
+    $("fgSend").disabled = false; $("fgSend").textContent = "Send code";
+    if (ok) { ["rsCode", "rsNew", "rsNew2"].forEach(i => $(i).value = ""); $("rsErr").textContent = ""; fgShow("rsForm"); setTimeout(() => $("rsCode").focus(), 50); }
+  };
+  $("rsAgain").onclick = async () => { $("rsErr").textContent = ""; if (await fgSend("rsErr")) { $("rsCode").value = ""; toast("A new code is on its way"); } };
+  $("rsShow").onchange = () => ["rsNew", "rsNew2"].forEach(i => $(i).type = $("rsShow").checked ? "text" : "password");
+  $("rsForm").onsubmit = async ev => {
+    ev.preventDefault();
+    const c = $("rsCode").value.replace(/\D/g, ""), n = $("rsNew").value, n2 = $("rsNew2").value, err = m => { $("rsErr").textContent = m; };
+    if (c.length !== 6) return err("Please type the 6-digit code from the text.");
+    if (n.length < 4) return err("The new password must be at least 4 characters.");
+    if (n !== n2) return err("The two new passwords are not the same. Please type them again.");
+    err(""); $("rsSave").disabled = true; $("rsSave").textContent = "Saving…";
+    let r = null, d = {};
+    try { r = await fetch(API + "reset-verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code: c, new: n }), cache: "no-store" }); d = await r.json(); } catch (e) {}
+    $("rsSave").disabled = false; $("rsSave").textContent = "Set new password";
+    if (r && r.status === 200 && d.token) {
+      try { localStorage.setItem(AUTH_LS, JSON.stringify({ token: d.token, user: d.user })); } catch (e) {}
+      try { sessionStorage.setItem("cal_pwmsg", "1"); } catch (e) {}
+      location.reload();
+    } else err((d && d.error) || "Could not reach the calendar. Check the internet and try again.");
+  };
+  try { if (sessionStorage.getItem("cal_pwmsg")) { sessionStorage.removeItem("cal_pwmsg"); setTimeout(() => toast("Password changed. You are signed in."), 300); } } catch (e) {}
   $("pwOpen").onclick = () => { ["pwOld", "pwNew", "pwNew2"].forEach(i => { $(i).value = ""; $(i).type = "password"; }); $("pwShow").checked = false; $("pwErr").textContent = ""; $("pwDlg").showModal(); };
   $("pwCancel").onclick = () => $("pwDlg").close();
   $("pwShow").onchange = () => ["pwOld", "pwNew", "pwNew2"].forEach(i => $(i).type = $("pwShow").checked ? "text" : "password");
