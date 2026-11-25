@@ -269,6 +269,7 @@ body.needsignin .wrap,body.needsignin .fab{display:none!important}
 [hidden]{display:none!important}
 .sicard .silink{display:block;width:auto;height:auto;margin:14px auto 0;background:none;border:0;padding:6px 4px;color:var(--accent);font-weight:600;text-decoration:underline;font-size:17px}
 .sicard .sicode{letter-spacing:.3em;font-size:26px!important;text-align:center;font-variant-numeric:tabular-nums}
+.fgPhone{white-space:nowrap}
 .sicard .sinote{color:var(--muted);font-size:15px;margin:-10px 0 18px}
 .siok{color:var(--green,#1f7a3a);font-weight:600;text-align:center;margin:12px 0 0}
 #pwDlg label{display:block;font-weight:600;font-size:16px;margin:0 0 6px}
@@ -807,6 +808,7 @@ async function load() {
   $("cal").classList.add("loading");
   const [{ status, data }] = await Promise.all([api("entries?from=" + iso(s) + "&to=" + iso(e)), loadClients()]);
   $("cal").classList.remove("loading");
+  if (status === 401) return; // not signed in: the sign-in screen is showing, no "could not load" toast
   if (status !== 200) { toast("Could not load. Check the internet and try again."); return; }
   entries = data.entries; render();
 }
