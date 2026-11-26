@@ -117,7 +117,7 @@ dialog{overflow-x:hidden}
 .chk input{width:22px;height:22px;accent-color:var(--accent)}
 .money{position:relative}.money span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:18px}.money .f{padding-left:28px}
 .item .hrs{font-size:14px;color:var(--muted)}
-/* Round 19: hours per year + balance */
+/* Round 19: hours for 12 months + balance */
 .ybal{margin-top:8px;border-radius:var(--r);padding:9px 12px;font-size:15.5px;background:var(--accent-soft);border:1px solid #BFD9CC;color:#173F33;line-height:1.45;display:none}
 .ybal.on{display:block}.ybal.soft{background:#F4F1EB;border-color:var(--line);color:var(--muted);font-size:14px}
 .ybal b{font-variant-numeric:tabular-nums}.ybal .ya{margin-top:3px;font-weight:600}.ybal .ys{margin-top:3px;font-size:13.5px;color:var(--muted)}
@@ -392,7 +392,7 @@ body.needsignin .wrap,body.needsignin .fab{display:none!important}
     </header>
     <button class="btn primary" id="newClientBtn2" style="width:100%;height:54px;font-size:17px">+ New client</button>
     <button class="btn up" id="upBtn2" style="width:100%;height:54px;margin-top:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Upload a file (Excel, Word, PDF)</button>
-    <p class="uphint">The file can be a list of clients with columns like <b>Name</b>, <b>Agency</b> (or Billed to), <b>Medicaid #</b>, <b>Hours per year</b>, <b>Renewal date</b>, <b>Notes</b>. Bookings with <b>Date</b>, <b>Start</b>, <b>End</b> and <b>Client</b> are added to the calendar too. You see everything before it is saved.</p>
+    <p class="uphint">The file can be a list of clients with columns like <b>Name</b>, <b>Agency</b> (or Billed to), <b>Medicaid #</b>, <b>Hours for 12 months</b>, <b>Renewal date</b>, <b>Notes</b>. Bookings with <b>Date</b>, <b>Start</b>, <b>End</b> and <b>Client</b> are added to the calendar too. You see everything before it is saved.</p>
     <input type="file" id="upFile" accept=".xlsx,.xls,.xlsm,.csv,.ods,.txt,.docx,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf" hidden>
     <button class="btn outline" id="sheetsBtn" style="width:100%;height:54px;margin-top:12px;font-size:17px">Agency cover sheets (PDF / Word)</button>
     <p class="sub" id="cliSub" style="margin-top:12px"></p>
@@ -480,7 +480,7 @@ body.needsignin .wrap,body.needsignin .fab{display:none!important}
     <input class="f agrow" id="cagencyNew" autocomplete="off" maxlength="80" placeholder="Type the new agency's name" hidden>
     <label for="cmed">Medicaid # (optional)</label>
     <input class="f" id="cmed" autocomplete="off" maxlength="40" placeholder="For the billing cover sheet">
-    <label for="cyh">Hours per year <span class="opt">(optional)</span></label>
+    <label for="cyh">Hours for 12 months <span class="opt">(optional)</span></label>
     <input class="f" id="cyh" type="number" inputmode="decimal" min="0" step="0.25" placeholder="e.g. 300">
     <label for="cysM">Renewal date <span class="opt">(month and day; blank = January 1)</span></label>
     <div class="yrow"><select class="f sel" id="cysM" aria-label="Renewal month"></select><select class="f sel" id="cysD" aria-label="Renewal day"></select></div>
@@ -1055,7 +1055,7 @@ function showTab(t) {
   history.replaceState(null, "", t === "tot" ? "#totals" : t === "cli" ? "#clients" : "#");
   scrollTo(0, 0);
 }
-/* ---------- Round 19 (2026-11-26): hours per year + balance from the client's renewal date ---------- */
+/* ---------- Round 19 (2026-11-26): hours for 12 months + balance from the client's renewal date ---------- */
 const MON3 = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const renewOf = c => c && c.year_start && /^\d\d-\d\d$/.test(c.year_start) ? c.year_start : "";
 const fmtMD = md => MON3[+md.slice(0, 2) - 1] + " " + (+md.slice(3));
@@ -1081,7 +1081,7 @@ async function balCheck() {
   const w = $("yBal"), seq = ++ybSeq;
   const c = clients[nkey($("fname").value || "")], d = $("fdate").value;
   if (!c || !d) { w.className = "ybal"; w.innerHTML = ""; return; }
-  if (!hasYH(c)) { w.className = "ybal on soft"; w.textContent = "No hours per year set for " + c.name + " (add them on the Clients tab)."; return; }
+  if (!hasYH(c)) { w.className = "ybal on soft"; w.textContent = "No hours for 12 months set for " + c.name + " (add them on the Clients tab)."; return; }
   const [from, to, nxt] = yearSpan(c, d), list = await ybEntries(from, to);
   if (seq !== ybSeq) return;
   if (!list) { w.className = "ybal on soft"; w.textContent = "Could not load the hours used. Check the internet."; return; }
@@ -1091,7 +1091,7 @@ async function balCheck() {
   const rn = renewOf(c);
   const leftHtml = left < 0 ? '<span class="over">Over by ' + balTxt(left) + " h</span>" : "<b>" + fmtH(left) + "</b>";
   w.className = "ybal on" + (left < 0 || (thisH && after < 0) ? " isover" : "");
-  w.innerHTML = '<div class="yl">Hours per year: <b>' + fmtH(yh) + "</b> · Used " + (rn ? "since renewal (" + fmtUSs(from) + ")" : "since " + fmtUSs(from)) + (editing ? " (not counting this booking)" : "") + ": <b>" + fmtH(used) + "</b> · Left: " + leftHtml + " · Renews " + fmtUSs(nxt) + "</div>" +
+  w.innerHTML = '<div class="yl">Hours for 12 months: <b>' + fmtH(yh) + "</b> · Used " + (rn ? "since renewal (" + fmtUSs(from) + ")" : "since " + fmtUSs(from)) + (editing ? " (not counting this booking)" : "") + ": <b>" + fmtH(used) + "</b> · Left: " + leftHtml + " · Renews " + fmtUSs(nxt) + "</div>" +
     (thisH ? '<div class="ya">After this booking (' + fmtH(thisH) + " h): " + (after < 0 ? '<span class="over">Over by ' + balTxt(after) + " h</span> (you can still save)" : fmtH(after) + " h left") + "</div>" : "") +
     '<div class="ys">' + mine.length + (mine.length === 1 ? " booking" : " bookings") + " " + fmtUSs(from) + " – " + fmtUSs(to) + (rn ? "" : " (no renewal date set: counting from Jan 1)") + "</div>";
 }
@@ -1100,7 +1100,7 @@ function yearRepLine(k, monthTo, monthH) {
   const c = clients[k]; if (!hasYH(c)) return "";
   const [from, , nxt] = yearSpan(c, monthTo), yh = Number(c.year_hours);
   const used = tYear.filter(x => nkey(x.name) === k && x.date >= from && x.date <= monthTo).reduce((a, x) => a + hours(x), 0), left = yh - used;
-  return '<div class="yrep' + (left < 0 ? " isover" : "") + '">Hours per year: <b>' + fmtH(yh) + "</b> · This month: <b>" + fmtH(monthH) + "</b> · Used " + (renewOf(c) ? "since renewal" : "since") + " " + fmtUSs(from) + " up to " + fmtUSs(monthTo) + ": <b>" + fmtH(used) + "</b> · Left: " +
+  return '<div class="yrep' + (left < 0 ? " isover" : "") + '">Hours for 12 months: <b>' + fmtH(yh) + "</b> · This month: <b>" + fmtH(monthH) + "</b> · Used " + (renewOf(c) ? "since renewal" : "since") + " " + fmtUSs(from) + " up to " + fmtUSs(monthTo) + ": <b>" + fmtH(used) + "</b> · Left: " +
     (left < 0 ? '<span class="over">Over by ' + balTxt(left) + " h</span>" : "<b>" + fmtH(left) + "</b>") + " · Renews " + fmtUSs(nxt) + "</div>";
 }
 function fillRenew(md) {
@@ -1121,7 +1121,7 @@ async function loadCli() {
   const list = Object.values(clients).sort((a, b) => a.name.localeCompare(b.name));
   $("cliSub").textContent = list.length ? list.length + (list.length === 1 ? " client" : " clients") + ". Tap one to change it." : "";
   $("cliList").innerHTML = list.length ? list.map(c => '<li><button class="cli" data-cli="' + esc(c.name_key) + '"><span><div class="nm">' + esc(c.name) + '</div><div class="meta">' +
-    (c.agency ? '<span class="billto">Bills to ' + esc(c.agency) + "</span> · " : "") + (c.medicaid ? "Medicaid # " + esc(c.medicaid) + " · " : "") + (hasYH(c) ? fmtH(c.year_hours) + " hours/year" + (renewOf(c) ? ", renews " + fmtMD(renewOf(c)) : "") + " · " : "") + (c.bookings ? c.bookings + (c.bookings == 1 ? " booking" : " bookings") : "No bookings yet") + [c.note].filter(Boolean).map(v => " · " + esc(v)).join("") + '</div></span></button></li>').join("")
+    (c.agency ? '<span class="billto">Bills to ' + esc(c.agency) + "</span> · " : "") + (c.medicaid ? "Medicaid # " + esc(c.medicaid) + " · " : "") + (hasYH(c) ? fmtH(c.year_hours) + " hours per 12 months" + (renewOf(c) ? ", renews " + fmtMD(renewOf(c)) : "") + " · " : "") + (c.bookings ? c.bookings + (c.bookings == 1 ? " booking" : " bookings") : "No bookings yet") + [c.note].filter(Boolean).map(v => " · " + esc(v)).join("") + '</div></span></button></li>').join("")
     : '<li class="empty">No clients yet. Tap "+ New client" to add one.</li>';
 }
 const BASE_AGENCIES = ["Hamaspik", "HCS", "Rayim", "Yedei Chesed", "Metropolitan"];
@@ -1148,7 +1148,7 @@ $("cf").addEventListener("submit", async e => {
   const name = $("cname").value.trim(), rv = $("crate").value.trim();
   if (!name) return ($("cerr").textContent = "Please type a name.");
   if (rv !== "" && !(Number(rv) >= 0)) return ($("cerr").textContent = "The rate must be a number, like 50.");
-  const yv = $("cyh").value.trim(); if (yv !== "" && !(Number(yv) >= 0 && Number(yv) <= 100000)) return ($("cerr").textContent = "Hours per year must be a number, like 300.");
+  const yv = $("cyh").value.trim(); if (yv !== "" && !(Number(yv) >= 0 && Number(yv) <= 100000)) return ($("cerr").textContent = "Hours for 12 months must be a number, like 300.");
   let agency = $("cagency").value;
   if (agency === "__new") { agency = $("cagencyNew").value.trim().replace(/\s+/g, " "); if (!agency) return ($("cerr").textContent = "Please type the new agency's name, or pick one from the list."); const ex = agencies().find(a => nkey(a) === nkey(agency)); if (ex) agency = ex; }
   $("cSave").disabled = true;
@@ -1338,7 +1338,7 @@ function parseLine(raw) {
 // Header names it understands (compared after lowercasing and removing punctuation).
 const HEAD = [
   ["yearstart", /\b(renew|renews|renewal|renewal date|renewal month|anniversary)\b|^(?=.*\b(year|yearly|annual|plan|approval|authorization|authorisation|auth)\b)(?=.*\b(start|starts|begin|begins|from|effective)\b)|^(approval|authorization|auth|effective) date$/],
-  ["yearhours", /^(?=.*\b(year|yearly|annual|annually|yr)\b)(?=.*\b(hours?|hrs?|allowance|units)\b)|^(approved|authorized|authorised|allowed|available) (hours?|hrs)$|^hours? (approved|authorized|authorised|allowed|available)$|^(yearly|annual) allowance$/],
+  ["yearhours", /^(hours?|hrs) (for|per|in) (12|twelve) months?$|^(?=.*\b(year|yearly|annual|annually|yr)\b)(?=.*\b(hours?|hrs?|allowance|units)\b)|^(approved|authorized|authorised|allowed|available) (hours?|hrs)$|^hours? (approved|authorized|authorised|allowed|available)$|^(yearly|annual) allowance$/],
   ["medicaid", /\b(medicaid|cin|medicaid id|medicaid number|medicaid no|member id|recipient id|mmis)\b/],
   ["agency", /^(agency|agency name|billing agency|billed to|bill to|billed|billing|payer|payor|payer name|insurance|insurance company|insurance name|funding|funding source|funder|funded by)$|\bagency\b/],
   ["email", /^(e ?mail|email address|mail)$/],
@@ -1354,7 +1354,7 @@ const HEAD = [
   ["name", /^(name|names|client|clients|client name|customer|customers|customer name|full name|student|student name|patient|patient name|contact|contact name|company|company name|business|account|account name|member|who)$/],
   ["note", /\b(notes?|comments?|remarks?|details?|description|address|info|memo)\b/],
 ];
-const LABEL = { yearhours: "hours per year", yearstart: "renewal date", medicaid: "Medicaid #", agency: "agency (bills to)", name: "client name", first: "first name", last: "last name", rate: "rate per hour", phone: "phone", email: "email", note: "note", date: "date", start: "start time", end: "end time", time: "time", hours: "hours" };
+const LABEL = { yearhours: "hours for 12 months", yearstart: "renewal date", medicaid: "Medicaid #", agency: "agency (bills to)", name: "client name", first: "first name", last: "last name", rate: "rate per hour", phone: "phone", email: "email", note: "note", date: "date", start: "start time", end: "end time", time: "time", hours: "hours" };
 const normHead = v => String(v == null ? "" : v).toLowerCase().replace(/\(.*?\)/g, m => m.includes("$") || /hr|hour/.test(m) ? " " + m.replace(/[()]/g, "") + " " : " ").replace(/[^a-z0-9$\/ ]+/g, " ").replace(/\s+/g, " ").trim();
 function headMap(row) {
   const map = {}, used = {};
@@ -1399,7 +1399,7 @@ function tableItems(rows, where, xs, isLines) {
   const items = [], h = findHeader(rows);
   if (!h) { rows.forEach((r, i) => { const line = r.map(str).filter(Boolean).join(" | "); if (line) items.push({ ...parseLine(line), where: where(i) }); }); return { items, cols: null }; }
   let { map, used, at } = h;
-  // Round 19: a client list with an "Hours" column but no date/time columns = hours per year
+  // Round 19: a client list with an "Hours" column but no date/time columns = hours for 12 months
   if (map.hours != null && map.yearhours == null && map.date == null && map.start == null && map.end == null && map.time == null) { map.yearhours = map.hours; used[map.hours] = "yearhours"; delete map.hours; }
   if (xs && xs[at]) { // PDF: put each cell under the header nearest to it
     const hx = xs[at];
@@ -1533,7 +1533,7 @@ async function buildPlan(items, fileName, cols) {
     else {
       c.changes = [];
       ["note", "agency", "medicaid"].forEach(f => { if (c[f] && c[f] !== ex[f]) c.changes.push((f === "medicaid" ? "Medicaid #" : f) + " " + (ex[f] ? "“" + ex[f] + "” → " : "") + "“" + c[f] + "”"); });
-      if (c.year_hours != null && Number(c.year_hours) !== Number(ex.year_hours == null ? NaN : ex.year_hours)) c.changes.push("hours per year " + (hasYH(ex) ? fmtH(ex.year_hours) + " → " : "") + fmtH(c.year_hours));
+      if (c.year_hours != null && Number(c.year_hours) !== Number(ex.year_hours == null ? NaN : ex.year_hours)) c.changes.push("hours for 12 months " + (hasYH(ex) ? fmtH(ex.year_hours) + " → " : "") + fmtH(c.year_hours));
       if (c.year_start != null && c.year_start !== (renewOf(ex) || "") && !(c.year_start === "" && !renewOf(ex))) c.changes.push("renewal " + (renewOf(ex) ? fmtMD(renewOf(ex)) + " → " : "") + (c.year_start ? fmtMD(c.year_start) : "Jan 1"));
       c.status = c.changes.length ? "update" : "same";
     }
@@ -1574,7 +1574,7 @@ function renderPlan() {
   if (!cl.length && !bk.length) h += '<p class="norate">No clients were found in this file. Check the format below and try another file.</p>' + FORMAT_HELP;
   if (P.cols && P.cols.length) h += '<div class="cols">Columns read: ' + P.cols.filter(c => !/rate|phone|email/.test(c[1])).map(c => "<b>" + esc(c[0]) + "</b> as " + c[1]).join(", ") + (P.unused && P.unused.length ? ". Not used: " + P.unused.map(esc).join(", ") : "") + ".</div>";
   const cRow = (c, i) => '<label class="urow"><input type="checkbox" data-uc="' + i + '"' + (c.on ? " checked" : "") + '><span><div class="u1">' + esc(c.name) + "</div><div class=u2>" +
-    (c.status === "update" ? '<span class="ch">' + esc(c.changes.join(", ")) + "</span>" : [c.agency ? "bills to " + c.agency : "", c.medicaid ? "Medicaid # " + c.medicaid : "", c.year_hours != null ? fmtH(c.year_hours) + " hours/year" : "", c.year_start ? "renews " + fmtMD(c.year_start) : "", c.note].filter(Boolean).map(esc).join(" · ")) + "</div></span></label>";
+    (c.status === "update" ? '<span class="ch">' + esc(c.changes.join(", ")) + "</span>" : [c.agency ? "bills to " + c.agency : "", c.medicaid ? "Medicaid # " + c.medicaid : "", c.year_hours != null ? fmtH(c.year_hours) + " hours per 12 months" : "", c.year_start ? "renews " + fmtMD(c.year_start) : "", c.note].filter(Boolean).map(esc).join(" · ")) + "</div></span></label>";
   if (nNew) h += '<div class="ugrp"><h4>New clients (' + nNew + ")</h4>" + cl.map((c, i) => c.status === "new" ? cRow(c, i) : "").join("") + "</div>";
   if (nUp) h += '<div class="ugrp"><h4>Clients to update (' + nUp + ")</h4>" + cl.map((c, i) => c.status === "update" ? cRow(c, i) : "").join("") + "</div>";
   if (bk.length) h += '<div class="ugrp"><h4>Bookings for the calendar (' + bk.length + ")</h4>" + bk.map((b, i) => '<label class="urow' + (b.clash ? " c" : "") + (b.dup ? " sk" : "") + '"><input type="checkbox" data-ub="' + i + '"' + (b.on ? " checked" : "") + (b.dup ? " disabled" : "") + '><span><div class="u1">' + esc(b.name) + "</div><div class=u2>" + esc(fmtShort(b.date)) + ", " + fmtTime(b.time) + " – " + fmtTime(b.end) + (b.endGuess ? " (no end given: 1 hour)" : "") + "" + "</div>" +
@@ -1589,7 +1589,7 @@ function updSave() {
   $("upSave").hidden = !upPlan; $("upSave").disabled = !n;
   $("upSave").textContent = n ? "Save all (" + n + ")" : "Nothing to save";
 }
-const FORMAT_HELP = '<div class="cols" style="margin-top:12px"><b>What the file can look like</b><br>A table (Excel, Word or PDF) with a header row: <b>Name</b> (or Client, Customer), and if you like <b>Agency</b> (or Billed to, Payer), <b>Hours per year</b>, <b>Renewal date</b> and <b>Notes</b>.<br>For bookings add <b>Date</b>, <b>Start</b>, <b>End</b> (or Time like 10:00-11:30, or Hours).</div>';
+const FORMAT_HELP = '<div class="cols" style="margin-top:12px"><b>What the file can look like</b><br>A table (Excel, Word or PDF) with a header row: <b>Name</b> (or Client, Customer), and if you like <b>Agency</b> (or Billed to, Payer), <b>Hours for 12 months</b>, <b>Renewal date</b> and <b>Notes</b>.<br>For bookings add <b>Date</b>, <b>Start</b>, <b>End</b> (or Time like 10:00-11:30, or Hours).</div>';
 async function readUpload(file) {
   upPlan = null; $("uperr").textContent = ""; $("upTitle").textContent = "Reading the file…";
   $("upBody").innerHTML = '<p><span class="spin"></span>Reading <b>' + esc(file.name) + "</b>…</p>"; updSave();
