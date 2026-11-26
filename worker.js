@@ -10,6 +10,10 @@ const key = n => n.trim().toLowerCase().replace(/\s+/g, " ");
 const COLS = "id,name,date,time,end_time,rate,note";
 const txt = (v, n) => String(v == null ? "" : v).trim().replace(/\s+/g, " ").slice(0, n);
 const num = v => (v === null || v === undefined || v === "" || isNaN(Number(v)) || Number(v) < 0) ? null : Math.round(Number(v) * 100) / 100;
+// Round 19 (2026-11-26): hours allowed per year (year_hours) + the day the client's year starts (year_start "MM-DD", empty = Jan 1)
+const yHours = v => { const n = num(v); return n === null || n > 100000 ? null : n; };
+const yStart = v => { const m = /^(\d{1,2})-(\d{1,2})$/.exec(String(v == null ? "" : v).trim()); if (!m) return null; const mo = +m[1], d = +m[2];
+  return mo >= 1 && mo <= 12 && d >= 1 && d <= [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mo - 1] && !(mo === 1 && d === 1) ? String(mo).padStart(2, "0") + "-" + String(d).padStart(2, "0") : null; };
 
 function clean(b) {
   const name = String(b.name || "").trim().replace(/\s+/g, " ").slice(0, 80);
@@ -270,7 +274,7 @@ async function handle(req, env) {
         }
       }
       if (parts[3] === "clients" && !id && req.method === "GET") {
-        const r = await env.DB.prepare("SELECT c.name_key,c.name,c.rate,c.phone,c.email,c.note,c.agency,c.medicaid,(SELECT COUNT(*) FROM entries e WHERE lower(e.name)=c.name_key) AS bookings FROM clients c ORDER BY lower(c.name)").all();
+        const r = await env.DB.prepare("SELECT c.name_key,c.name,c.rate,c.phone,c.email,c.note,c.agency,c.medicaid,c.year_hours,c.year_start,(SELECT COUNT(*) FROM entries e WHERE lower(e.name)=c.name_key) AS bookings FROM clients c ORDER BY lower(c.name)").all();
         return json({ clients: r.results || [] });
       }
       if (parts[3] === "clients" && !id && req.method === "POST") {
@@ -280,7 +284,7 @@ async function handle(req, env) {
         const ex = await env.DB.prepare("SELECT name FROM clients WHERE name_key=?").bind(key(name)).first();
         if (ex) return json({ error: ex.name + " is already in your clients." }, 409);
         await setClientRate(env, name, num(b.rate));
-        await env.DB.prepare("UPDATE clients SET phone=?,email=?,note=?,agency=?,medicaid=? WHERE name_key=?").bind(txt(b.phone, 40) || null, txt(b.email, 120) || null, txt(b.note, 300) || null, txt(b.agency, 80) || null, txt(b.medicaid, 40) || null, key(name)).run();
+        await env.DB.prepare("UPDATE clients SET phone=?,email=?,note=?,agency=?,medicaid=?,year_hours=?,year_start=? WHERE name_key=?").bind(txt(b.phone, 40) || null, txt(b.email, 120) || null, txt(b.note, 300) || null, txt(b.agency, 80) || null, txt(b.medicaid, 40) || null, yHours(b.year_hours), yStart(b.year_start), key(name)).run();
         return json({ ok: true });
       }
       if (parts[3] === "import" && req.method === "POST") {
@@ -294,9 +298,9 @@ async function handle(req, env) {
           .forEach(r => seen[key(r.name) + "|" + r.date + "|" + r.time] = 1);
         for (const c of cl) {
           const name = txt(c.name, 80); if (!name) continue;
-          const k = key(name), rate = num(c.rate), phone = txt(c.phone, 40) || null, email = txt(c.email, 120) || null, note = txt(c.note, 300) || null, agency = txt(c.agency, 80) || null, medicaid = txt(c.medicaid, 40) || null;
-          if (have[k]) { updated++; st.push(env.DB.prepare("UPDATE clients SET rate=COALESCE(?,rate),phone=COALESCE(?,phone),email=COALESCE(?,email),note=COALESCE(?,note),agency=COALESCE(?,agency),medicaid=COALESCE(?,medicaid),updated_at=? WHERE name_key=?").bind(rate, phone, email, note, agency, medicaid, now, k)); }
-          else { added++; have[k] = 1; st.push(env.DB.prepare("INSERT INTO clients (name_key,name,rate,phone,email,note,agency,medicaid,updated_at) VALUES (?,?,?,?,?,?,?,?,?)").bind(k, name, rate, phone, email, note, agency, medicaid, now)); }
+          const k = key(name), rate = num(c.rate), phone = txt(c.phone, 40) || null, email = txt(c.email, 120) || null, note = txt(c.note, 300) || null, agency = txt(c.agency, 80) || null, medicaid = txt(c.medicaid, 40) || null, yh = yHours(c.year_hours), ys = yStart(c.year_start);
+          if (have[k]) { updated++; st.push(env.DB.prepare("UPDATE clients SET rate=COALESCE(?,rate),phone=COALESCE(?,phone),email=COALESCE(?,email),note=COALESCE(?,note),agency=COALESCE(?,agency),medicaid=COALESCE(?,medicaid),year_hours=COALESCE(?,year_hours),year_start=COALESCE(?,year_start),updated_at=? WHERE name_key=?").bind(rate, phone, email, note, agency, medicaid, yh, ys, now, k)); }
+          else { added++; have[k] = 1; st.push(env.DB.prepare("INSERT INTO clients (name_key,name,rate,phone,email,note,agency,medicaid,year_hours,year_start,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)").bind(k, name, rate, phone, email, note, agency, medicaid, yh, ys, now)); }
         }
         for (const x of bk) {
           const e = clean(x); if (e.err) continue;
@@ -322,10 +326,10 @@ async function handle(req, env) {
           const ex = await env.DB.prepare("SELECT name FROM clients WHERE name_key=?").bind(nk).first();
           if (ex) return json({ error: ex.name + " is already in your clients." }, 409);
         }
-        const extra = ["phone", "email", "note", "agency", "medicaid"].filter(f => b[f] !== undefined);
+        const extra = ["phone", "email", "note", "agency", "medicaid", "year_hours", "year_start"].filter(f => b[f] !== undefined);
         await env.DB.batch([
           env.DB.prepare("UPDATE clients SET name_key=?, name=?, rate=?, updated_at=?" + extra.map(f => "," + f + "=?").join("") + " WHERE name_key=?")
-            .bind(nk, name, num(b.rate), now, ...extra.map(f => txt(b[f], f === "phone" ? 40 : f === "email" ? 120 : f === "agency" || f === "medicaid" ? (f === "agency" ? 80 : 40) : 300) || null), old),
+            .bind(nk, name, num(b.rate), now, ...extra.map(f => f === "year_hours" ? yHours(b[f]) : f === "year_start" ? yStart(b[f]) : txt(b[f], f === "phone" ? 40 : f === "email" ? 120 : f === "agency" || f === "medicaid" ? (f === "agency" ? 80 : 40) : 300) || null), old),
           env.DB.prepare("UPDATE entries SET name=?, updated_at=? WHERE lower(name)=?").bind(name, now, old),
           // Round 13: the client's own cover sheet follows a rename
           ...(nk !== old ? [env.DB.prepare("DELETE FROM sheets WHERE agency_key=?").bind("client:" + nk), env.DB.prepare("DELETE FROM sheet_parts WHERE agency_key=?").bind("client:" + nk),
